@@ -29,7 +29,7 @@ import {
   X,
   ArrowLeft,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   defaultLocation,
   cautionSymptoms,
@@ -48,6 +48,7 @@ import {
   selectedSymptomsFromSeverity,
 } from "./lib/recommendation";
 import { getHospitalsWithFallback, getSheltersWithFallback } from "./services/dataService";
+import { geocodeAddress, reverseGeocodePoint } from "./services/kakaoMapService";
 import { fetchWeatherWithFallback, type WeatherLoadResult } from "./services/weatherService";
 import type {
   ActivityStatus,
@@ -214,10 +215,22 @@ function inferAddressCenter(address: string) {
   return addressKeywordCenters.find((item) => address.includes(item.keyword))?.center;
 }
 
-function addressCandidateFromPostcode(data: DaumPostcodeData): AddressCandidate {
+async function addressCandidateFromPostcode(data: DaumPostcodeData): Promise<AddressCandidate> {
   const address = data.roadAddress || data.address || data.jibunAddress || "선택한 주소";
   const center = inferAddressCenter(address) || inferAddressCenter(data.bname || "") || defaultLocation;
   const label = data.buildingName || data.bname || address;
+  const geocoded = await geocodeAddress(address);
+
+  if (geocoded) {
+    return {
+      id: "daum-" + Date.now(),
+      label,
+      address,
+      lat: geocoded.lat,
+      lng: geocoded.lng,
+      note: "선택 주소의 실제 좌표로 추천을 계산합니다.",
+    };
+  }
 
   return {
     id: "daum-" + Date.now(),
@@ -225,7 +238,7 @@ function addressCandidateFromPostcode(data: DaumPostcodeData): AddressCandidate 
     address,
     lat: center.lat,
     lng: center.lng,
-    note: "실제 주소 검색 결과입니다. 지도 API 없이 선택 주소의 행정구역 중심으로 추천을 계산합니다.",
+    note: "주소 좌표 변환을 사용할 수 없어 행정구역 중심으로 추천을 계산합니다.",
   };
 }
 
@@ -409,6 +422,7 @@ function App() {
     lng: defaultLocation.lng,
   });
   const [locationMode, setLocationMode] = useState<LocationMode>("area");
+  const locationRequestId = useRef(0);
   const [selectedAddress, setSelectedAddress] = useState<AddressCandidate | null>(null);
   const [locationDisplay, setLocationDisplay] = useState(defaultLocation.label);
   const [locationNote, setLocationNote] = useState(
@@ -475,6 +489,7 @@ function App() {
 
   const useActivityAreaLocation = () => {
     const center = activityAreaCenter();
+    locationRequestId.current += 1;
     setLocationMode("area");
     setSelectedAddress(null);
 
@@ -508,6 +523,8 @@ function App() {
   };
 
   const requestLocation = () => {
+    const requestId = locationRequestId.current + 1;
+    locationRequestId.current = requestId;
     setLocationMode("gps");
     setSelectedAddress(null);
 
@@ -527,6 +544,13 @@ function App() {
         setLocation(currentLocation);
         setLocationDisplay(gpsLocationDisplay(currentLocation));
         setLocationNote("");
+        void reverseGeocodePoint(currentLocation).then((address) => {
+          if (locationRequestId.current !== requestId || !address) {
+            return;
+          }
+
+          setLocationDisplay(address + " 인근");
+        });
       },
       (error) => {
         const reason =
@@ -542,6 +566,7 @@ function App() {
   };
 
   const useAddressLocation = (address: AddressCandidate) => {
+    locationRequestId.current += 1;
     setLocationMode("address");
     setSelectedAddress(address);
     setLocation({ lat: address.lat, lng: address.lng });
@@ -1676,6 +1701,7 @@ function IntegrationStatusView({
   hospitalDataset: ReturnType<typeof getHospitalsWithFallback>;
 }) {
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "미설정";
+  const kakaoMapReady = Boolean(import.meta.env.VITE_KAKAO_MAP_KEY);
   const weatherStatus = weatherResult.source === "api" && weatherResult.ok ? "연결됨" : "fallback";
   const weatherTone = weatherStatus === "연결됨" ? "ok" : "warn";
   const shelterTone = shelterDataset.source === "mock" ? "warn" : "ok";
@@ -1719,10 +1745,10 @@ function IntegrationStatusView({
         <StatusCard
           icon={Navigation}
           title="지도 기능"
-          status="외부 링크"
+          status={kakaoMapReady ? "주소 좌표 변환" : "외부 링크"}
           tone="info"
-          detail="지도 SDK 없이 카카오맵 검색 링크로 길찾기를 연결합니다."
-          meta="지도 API 키 불필요"
+          detail={kakaoMapReady ? "카카오 지도 키로 주소와 GPS 좌표를 보정합니다. 실패하면 기존 fallback을 사용합니다." : "지도 SDK 없이 카카오맵 검색 링크로 길찾기를 연결합니다."}
+          meta={kakaoMapReady ? "키 값은 화면에 표시하지 않음" : "지도 API 키 불필요"}
         />
       </div>
 
@@ -2457,8 +2483,8 @@ function AddressSearchDialog({
     try {
       const Postcode = await loadDaumPostcode();
       new Postcode({
-        oncomplete: (data: DaumPostcodeData) => {
-          onSelect(addressCandidateFromPostcode(data));
+        oncomplete: async (data: DaumPostcodeData) => {
+          onSelect(await addressCandidateFromPostcode(data));
         },
       }).open();
       setSearchState("idle");
@@ -2477,7 +2503,7 @@ function AddressSearchDialog({
           <p className="text-sm font-bold text-cool">실제 주소 검색</p>
           <h2 id="address-search-title" className="mt-1 text-xl font-black">주소를 검색하세요</h2>
           <p className="mt-2 text-sm leading-6 text-stone-700">
-            주소 검색은 실제 주소 검색 창을 사용합니다. 지도 API 키가 없어서 추천 계산 좌표는 선택한 주소의 행정구역 중심으로 보정합니다.
+            주소 검색은 실제 주소 검색 창을 사용합니다. 지도 키가 설정되어 있으면 실제 좌표로 추천을 계산합니다.
           </p>
         </div>
 
