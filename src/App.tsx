@@ -67,7 +67,7 @@ const durationMaxStep = 20;
 const symptomOrder = Object.keys(symptomLabels) as SymptomId[];
 type LocationMode = "gps" | "area" | "address";
 type LocationCenter = GeoPoint & { label: string };
-type AddressCandidate = LocationCenter & { id: string; address: string };
+type AddressCandidate = LocationCenter & { id: string; address: string; note?: string };
 
 const symptomVisuals: Record<SymptomId, { shortLabel: string; hint: string; icon: LucideIcon }> = {
   dizziness: { shortLabel: "어지러움", hint: "빙빙 돌거나 휘청거림", icon: Activity },
@@ -162,6 +162,90 @@ const mockAddressCandidates: AddressCandidate[] = [
   { id: "byeongjeom", label: "병점역", address: "경기도 화성시 병점노을로 12", lat: 37.2073, lng: 127.0341 },
   { id: "mado", label: "마도면 문화센터", address: "경기도 화성시 마도면 마도북로 389", lat: 37.2054, lng: 126.7753 },
 ];
+
+type DaumPostcodeData = {
+  address?: string;
+  roadAddress?: string;
+  jibunAddress?: string;
+  buildingName?: string;
+  bname?: string;
+  sigungu?: string;
+  zonecode?: string;
+};
+
+const addressKeywordCenters: Array<{ keyword: string; center: LocationCenter }> = [
+  { keyword: "동탄", center: hwaseongLocationCenters["동탄7동"] || { label: "동탄권 중심", lat: 37.1992, lng: 127.0984 } },
+  { keyword: "병점", center: hwaseongLocationCenters["병점1동"] || { label: "병점권 중심", lat: 37.206, lng: 127.0335 } },
+  { keyword: "진안", center: hwaseongLocationCenters["진안동"] || { label: "진안동 중심", lat: 37.2139, lng: 127.0357 } },
+  { keyword: "반월", center: hwaseongLocationCenters["반월동"] || { label: "반월동 중심", lat: 37.2256, lng: 127.0598 } },
+  { keyword: "기배", center: hwaseongLocationCenters["기배동"] || { label: "기배동 중심", lat: 37.2212, lng: 126.9817 } },
+  { keyword: "화산", center: hwaseongLocationCenters["화산동"] || { label: "화산동 중심", lat: 37.2059, lng: 127.0101 } },
+  { keyword: "남양", center: hwaseongLocationCenters["남양읍"] || { label: "남양읍 중심", lat: 37.2117, lng: 126.8168 } },
+  { keyword: "매송", center: hwaseongLocationCenters["매송면"] || { label: "매송면 중심", lat: 37.2492, lng: 126.9045 } },
+  { keyword: "비봉", center: hwaseongLocationCenters["비봉면"] || { label: "비봉면 중심", lat: 37.2357, lng: 126.8748 } },
+  { keyword: "마도", center: hwaseongLocationCenters["마도면"] || { label: "마도면 중심", lat: 37.2054, lng: 126.7753 } },
+  { keyword: "송산", center: hwaseongLocationCenters["송산면"] || { label: "송산면 중심", lat: 37.2204, lng: 126.7398 } },
+  { keyword: "서신", center: hwaseongLocationCenters["서신면"] || { label: "서신면 중심", lat: 37.1665, lng: 126.7082 } },
+  { keyword: "봉담", center: hwaseongLocationCenters["봉담읍"] || { label: "봉담읍 중심", lat: 37.2203, lng: 126.9498 } },
+  { keyword: "우정", center: hwaseongLocationCenters["우정읍"] || { label: "우정읍 중심", lat: 37.0862, lng: 126.8172 } },
+  { keyword: "향남", center: hwaseongLocationCenters["향남읍"] || { label: "향남읍 중심", lat: 37.1318, lng: 126.9209 } },
+  { keyword: "팔탄", center: hwaseongLocationCenters["팔탄면"] || { label: "팔탄면 중심", lat: 37.1624, lng: 126.9031 } },
+  { keyword: "장안", center: hwaseongLocationCenters["장안면"] || { label: "장안면 중심", lat: 37.0784, lng: 126.8338 } },
+  { keyword: "양감", center: hwaseongLocationCenters["양감면"] || { label: "양감면 중심", lat: 37.0818, lng: 126.9563 } },
+  { keyword: "정남", center: hwaseongLocationCenters["정남면"] || { label: "정남면 중심", lat: 37.1612, lng: 126.9711 } },
+];
+
+function inferAddressCenter(address: string) {
+  return addressKeywordCenters.find((item) => address.includes(item.keyword))?.center;
+}
+
+function addressCandidateFromPostcode(data: DaumPostcodeData): AddressCandidate {
+  const address = data.roadAddress || data.address || data.jibunAddress || "선택한 주소";
+  const center = inferAddressCenter(address) || inferAddressCenter(data.bname || "") || defaultLocation;
+  const label = data.buildingName || data.bname || address;
+
+  return {
+    id: "daum-" + Date.now(),
+    label,
+    address,
+    lat: center.lat,
+    lng: center.lng,
+    note: "실제 주소 검색 결과입니다. 지도 API 없이 선택 주소의 행정구역 중심으로 추천을 계산합니다.",
+  };
+}
+
+function loadDaumPostcode() {
+  return new Promise<any>((resolve, reject) => {
+    const win = window as any;
+    if (win.daum?.Postcode) {
+      resolve(win.daum.Postcode);
+      return;
+    }
+
+    const existing = document.querySelector<HTMLScriptElement>('script[data-daum-postcode="true"]');
+    if (existing) {
+      existing.addEventListener("load", () => resolve((window as any).daum.Postcode), { once: true });
+      existing.addEventListener("error", () => reject(new Error("주소 검색 스크립트를 불러오지 못했습니다.")), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js";
+    script.async = true;
+    script.dataset.daumPostcode = "true";
+    script.onload = () => {
+      const postcode = (window as any).daum?.Postcode;
+      if (postcode) {
+        resolve(postcode);
+      } else {
+        reject(new Error("주소 검색 기능을 찾지 못했습니다."));
+      }
+    };
+    script.onerror = () => reject(new Error("주소 검색 스크립트를 불러오지 못했습니다."));
+    document.head.appendChild(script);
+  });
+}
+
 
 const viewItems: Array<{
   id: ViewId;
@@ -391,19 +475,34 @@ function App() {
     setLocationNote("");
   };
 
+  const fallbackToActivityArea = (reason: string) => {
+    const center = activityAreaCenter();
+    setLocationMode("area");
+    setSelectedAddress(null);
+
+    if (center) {
+      setLocation({ lat: center.lat, lng: center.lng });
+      setLocationDisplay(center.label);
+      setLocationNote(reason + " 활동 지역 중심으로 추천을 계산합니다.");
+      return;
+    }
+
+    setLocation({ lat: defaultLocation.lat, lng: defaultLocation.lng });
+    setLocationDisplay(defaultLocation.label);
+    setLocationNote(reason + " 활동 지역 정보가 없어 임시 기준으로 추천을 계산합니다.");
+  };
+
   const requestLocation = () => {
     setLocationMode("gps");
     setSelectedAddress(null);
 
     if (!navigator.geolocation) {
-      setLocationDisplay(defaultLocation.label);
-      setLocationNote("현재 브라우저에서는 위치 기능을 사용할 수 없어 임시 기준을 사용합니다.");
-      setLocation({ lat: defaultLocation.lat, lng: defaultLocation.lng });
+      fallbackToActivityArea("현재 브라우저에서 GPS를 사용할 수 없습니다.");
       return;
     }
 
-    setLocationDisplay("GPS 현재 위치");
-    setLocationNote("위치 권한을 확인하고 있습니다.");
+    setLocationDisplay("GPS 현재 위치 확인 중");
+    setLocationNote("브라우저 위치 권한 창에서 허용을 눌러주세요.");
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setLocation({
@@ -413,15 +512,16 @@ function App() {
         setLocationDisplay("GPS 현재 위치");
         setLocationNote("");
       },
-      () => {
-        setLocation({
-          lat: defaultLocation.lat,
-          lng: defaultLocation.lng,
-        });
-        setLocationDisplay(defaultLocation.label);
-        setLocationNote("GPS 확인에 실패해 임시 기준을 사용합니다.");
+      (error) => {
+        const reason =
+          error.code === error.PERMISSION_DENIED
+            ? "위치 권한이 차단되었습니다."
+            : error.code === error.TIMEOUT
+              ? "GPS 응답이 늦어졌습니다."
+              : "GPS 위치 확인에 실패했습니다.";
+        fallbackToActivityArea(reason);
       },
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
     );
   };
 
@@ -430,7 +530,7 @@ function App() {
     setSelectedAddress(address);
     setLocation({ lat: address.lat, lng: address.lng });
     setLocationDisplay(address.label);
-    setLocationNote("");
+    setLocationNote(address.note || "");
   };
 
   useEffect(() => {
@@ -2180,7 +2280,7 @@ function EasyLocationSelector({
           selected={mode === "address"}
           icon={Search}
           title="주소 검색"
-          description="목록에서 주소를 선택"
+          description="실제 주소 검색"
           onClick={() => setSearchOpen(true)}
         />
       </div>
@@ -2250,7 +2350,7 @@ function LocationSelector({
             selected={mode === "address"}
             icon={Search}
             title="주소 검색"
-            description="목록에서 주소를 선택"
+            description="실제 주소 검색"
             onClick={() => setSearchOpen(true)}
           />
         </div>
@@ -2320,6 +2420,8 @@ function AddressSearchDialog({
   onClose: () => void;
 }) {
   const [query, setQuery] = useState("");
+  const [searchState, setSearchState] = useState<"idle" | "loading" | "fallback">("idle");
+  const [searchMessage, setSearchMessage] = useState("카카오/다음 주소검색으로 실제 주소를 찾을 수 있습니다.");
   const normalizedQuery = query.trim().toLowerCase();
   const results = mockAddressCandidates.filter((candidate) => {
     if (!normalizedQuery) {
@@ -2332,33 +2434,66 @@ function AddressSearchDialog({
     );
   });
 
+  const openRealAddressSearch = async () => {
+    setSearchState("loading");
+    setSearchMessage("주소 검색 창을 여는 중입니다.");
+
+    try {
+      const Postcode = await loadDaumPostcode();
+      new Postcode({
+        oncomplete: (data: DaumPostcodeData) => {
+          onSelect(addressCandidateFromPostcode(data));
+        },
+      }).open();
+      setSearchState("idle");
+      setSearchMessage("주소 검색 창에서 주소를 선택해 주세요.");
+    } catch {
+      setSearchState("fallback");
+      setSearchMessage("주소 검색을 불러오지 못했습니다. 아래 빠른 선택 주소를 사용할 수 있습니다.");
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 px-4 pb-4 pt-12" role="dialog" aria-modal="true" aria-labelledby="address-search-title">
       <div className="relative w-full max-w-md rounded-lg bg-white p-5 shadow-soft">
         <DialogCloseButton onClick={onClose} label="주소 검색 닫기" />
         <div className="pr-10">
-          <p className="text-sm font-bold text-cool">mock 주소 검색</p>
-          <h2 id="address-search-title" className="mt-1 text-xl font-black">주소를 선택하세요</h2>
+          <p className="text-sm font-bold text-cool">실제 주소 검색</p>
+          <h2 id="address-search-title" className="mt-1 text-xl font-black">주소를 검색하세요</h2>
           <p className="mt-2 text-sm leading-6 text-stone-700">
-            실제 주소 API 없이 발표용 후보 주소에서 검색합니다. 검색어를 입력한 뒤 목록에서 선택하세요.
+            주소 검색은 실제 주소 검색 창을 사용합니다. 지도 API 키가 없어서 추천 계산 좌표는 선택한 주소의 행정구역 중심으로 보정합니다.
           </p>
         </div>
 
+        <button
+          type="button"
+          className="mt-4 flex min-h-14 w-full items-center justify-center gap-2 rounded-lg bg-cool px-4 text-base font-black text-white shadow-soft transition hover:bg-coolDark"
+          onClick={openRealAddressSearch}
+          disabled={searchState === "loading"}
+        >
+          <Search size={20} aria-hidden="true" />
+          {searchState === "loading" ? "주소 검색 여는 중" : "주소 검색 창 열기"}
+        </button>
+
+        <p className={clsx("mt-3 rounded-lg px-3 py-2 text-xs font-bold leading-5", searchState === "fallback" ? "border border-orange-200 bg-orange-50 text-cool" : "bg-paper text-stone-600")}>
+          {searchState === "fallback" && <span className="mr-1 text-alert">*</span>}
+          {searchMessage}
+        </p>
+
         <label className="mt-4 block">
-          <span className="mb-2 block text-sm font-black text-stone-700">주소 검색어</span>
+          <span className="mb-2 block text-sm font-black text-stone-700">빠른 선택 주소 검색</span>
           <div className="relative">
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="예: 화성시청, 동탄역, 남양읍"
               className="min-h-12 w-full rounded-lg border border-line px-3 pl-10 text-base"
-              autoFocus
             />
             <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-500" size={19} aria-hidden="true" />
           </div>
         </label>
 
-        <div className="mt-4 max-h-72 space-y-2 overflow-y-auto pr-1">
+        <div className="mt-4 max-h-60 space-y-2 overflow-y-auto pr-1">
           {results.length > 0 ? (
             results.map((candidate) => (
               <button
@@ -2373,7 +2508,7 @@ function AddressSearchDialog({
             ))
           ) : (
             <p className="rounded-lg bg-paper p-3 text-sm font-bold leading-6 text-stone-600">
-              검색 결과가 없습니다. 현재 MVP에서는 준비된 mock 주소만 선택할 수 있습니다.
+              빠른 선택 결과가 없습니다. 위의 주소 검색 창을 열어 실제 주소를 검색해 주세요.
             </p>
           )}
         </div>
