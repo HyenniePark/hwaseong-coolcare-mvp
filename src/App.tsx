@@ -40,6 +40,7 @@ import {
 import {
   classifyHospitalRisk,
   classifyRisk,
+  distanceKm,
   formatDistance,
   kakaoSearchUrl,
   recommendHospitals,
@@ -152,6 +153,20 @@ const hwaseongLocationCenters: Record<string, LocationCenter> = {
   "양감면": { label: "양감면 중심", lat: 37.0818, lng: 126.9563 },
   "정남면": { label: "정남면 중심", lat: 37.1612, lng: 126.9711 },
 };
+
+const hwaseongAreaNames = Object.values(hwaseongDistrictGroups).flat() as string[];
+
+function gpsLocationDisplay(point: GeoPoint) {
+  const nearest = hwaseongAreaNames
+    .map((areaName) => {
+      const center = hwaseongLocationCenters[areaName];
+      return center ? { areaName, distance: distanceKm(point, center) } : null;
+    })
+    .filter((item): item is { areaName: string; distance: number } => Boolean(item))
+    .sort((a, b) => a.distance - b.distance)[0];
+
+  return nearest ? "화성시 " + nearest.areaName + " 인근" : "GPS 현재 위치";
+}
 
 const mockAddressCandidates: AddressCandidate[] = [
   { id: "cityhall", label: "화성시청", address: "경기도 화성시 남양읍 시청로 159", lat: 37.1996, lng: 126.8312 },
@@ -505,11 +520,12 @@ function App() {
     setLocationNote("브라우저 위치 권한 창에서 허용을 눌러주세요.");
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setLocation({
+        const currentLocation = {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
-        });
-        setLocationDisplay("GPS 현재 위치");
+        };
+        setLocation(currentLocation);
+        setLocationDisplay(gpsLocationDisplay(currentLocation));
         setLocationNote("");
       },
       (error) => {
