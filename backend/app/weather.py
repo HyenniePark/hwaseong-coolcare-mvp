@@ -68,6 +68,15 @@ def _fallback(message: str) -> dict[str, object]:
     }
 
 
+def _http_error_message(error: httpx.HTTPStatusError) -> str:
+    status_code = error.response.status_code
+
+    if status_code == 429:
+        return "기상청 API 요청이 잠시 많아 mockData를 사용합니다. 잠시 후 다시 확인해 주세요."
+
+    return f"기상청 API 응답 오류 HTTP {status_code}"
+
+
 def _items(payload: dict[str, Any]) -> list[dict[str, Any]]:
     response = payload.get("response", {})
     header = response.get("header", {})
@@ -136,5 +145,9 @@ async def get_weather() -> dict[str, object]:
             response = await client.get(KMA_ENDPOINT, params=params)
             response.raise_for_status()
             return _parse_weather(response.json(), base_date, base_time)
+    except httpx.HTTPStatusError as error:
+        return _fallback(_http_error_message(error))
+    except httpx.RequestError:
+        return _fallback("기상청 API 연결이 불안정해 mockData를 사용합니다.")
     except Exception as error:
-        return _fallback(f"기상청 API 호출 실패: {error}")
+        return _fallback(f"기상청 API 처리 실패: {type(error).__name__}")
