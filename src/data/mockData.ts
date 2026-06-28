@@ -1,0 +1,173 @@
+import type { CoolingShelter, MedicalFacility, SymptomId } from "../types";
+
+export const defaultLocation = {
+  label: "화성시청 주변",
+  lat: 37.1996,
+  lng: 126.8312,
+};
+
+export const mockWeather = {
+  location: "경기 화성시 남양읍",
+  temperatureC: 33,
+  humidityPercent: 68,
+  heatRisk: "높음",
+  source: "mockData",
+  updatedAt: "발표용 임시 날씨",
+};
+
+export const symptomLabels: Record<SymptomId, string> = {
+  dizziness: "어지러움",
+  nausea: "메스꺼움",
+  headache: "두통",
+  heavySweat: "땀이 많이 남",
+  muscleCramp: "근육경련",
+  fatigue: "피로감",
+  confusion: "의식이 흐림",
+  highFever: "고열",
+  breathingTrouble: "호흡곤란",
+  repeatedVomiting: "반복 구토",
+};
+
+export const emergencySymptoms: SymptomId[] = [
+  "confusion",
+  "highFever",
+  "breathingTrouble",
+  "repeatedVomiting",
+];
+
+export const cautionSymptoms: SymptomId[] = [
+  "dizziness",
+  "nausea",
+  "headache",
+  "heavySweat",
+  "muscleCramp",
+  "fatigue",
+];
+
+export const mockShelters: CoolingShelter[] = [
+  {
+    id: "shelter-001",
+    name: "남양읍 행정복지센터 무더위쉼터",
+    address: "경기도 화성시 남양읍 남양성지로 192-5",
+    lat: 37.2117,
+    lng: 126.8168,
+    areaM2: 214,
+    capacity: 58,
+    airConditioners: 8,
+    fans: 4,
+    note: "행정복지센터 내 접근성이 좋은 쉼터",
+  },
+  {
+    id: "shelter-002",
+    name: "화성시 남부노인복지관 쉼터",
+    address: "경기도 화성시 향남읍 토성로 37-22",
+    lat: 37.1318,
+    lng: 126.9209,
+    areaM2: 360,
+    capacity: 95,
+    airConditioners: 14,
+    fans: 12,
+    note: "고령자 이용 편의시설이 있는 넓은 쉼터",
+  },
+  {
+    id: "shelter-003",
+    name: "동탄어울림종합사회복지관 쉼터",
+    address: "경기도 화성시 동탄대로시범길 133",
+    lat: 37.1992,
+    lng: 127.0984,
+    areaM2: 420,
+    capacity: 120,
+    airConditioners: 16,
+    fans: 10,
+    note: "수용 인원이 넉넉하고 냉방 설비가 많은 쉼터",
+  },
+  {
+    id: "shelter-004",
+    name: "봉담읍 주민자치센터 무더위쉼터",
+    address: "경기도 화성시 봉담읍 샘마을1길 8",
+    lat: 37.2203,
+    lng: 126.9498,
+    areaM2: 188,
+    capacity: 46,
+    airConditioners: 6,
+    fans: 5,
+    note: "도보와 대중교통 접근이 비교적 쉬운 쉼터",
+  },
+  {
+    id: "shelter-005",
+    name: "마도면 문화센터 쉼터",
+    address: "경기도 화성시 마도면 마도북로 389",
+    lat: 37.2054,
+    lng: 126.7753,
+    areaM2: 240,
+    capacity: 62,
+    airConditioners: 7,
+    fans: 8,
+    note: "서부권 이동자에게 가까운 지역 쉼터",
+  },
+  {
+    id: "shelter-006",
+    name: "병점1동 행정복지센터 무더위쉼터",
+    address: "경기도 화성시 병점3로 99",
+    lat: 37.206,
+    lng: 127.0335,
+    areaM2: 198,
+    capacity: 52,
+    airConditioners: 7,
+    fans: 6,
+    note: "병점역 생활권과 가까운 쉼터",
+  },
+];
+
+export const mockHospitals: MedicalFacility[] = [
+  {
+    id: "hospital-001",
+    name: "화성중앙종합병원",
+    address: "경기도 화성시 향남읍 발안로 5",
+    lat: 37.1326,
+    lng: 126.9185,
+    phone: "031-000-1000",
+    type: "병원",
+    departments: "내과, 가정의학과, 응급진료 상담",
+  },
+  {
+    id: "hospital-002",
+    name: "남양우리내과의원",
+    address: "경기도 화성시 남양읍 시청로 109",
+    lat: 37.2062,
+    lng: 126.8175,
+    phone: "031-000-2000",
+    type: "의원",
+    departments: "내과",
+  },
+  {
+    id: "hospital-003",
+    name: "동탄서울가정의학과의원",
+    address: "경기도 화성시 동탄대로 537",
+    lat: 37.2021,
+    lng: 127.0989,
+    phone: "031-000-3000",
+    type: "의원",
+    departments: "가정의학과, 내과",
+  },
+  {
+    id: "hospital-004",
+    name: "봉담바른내과의원",
+    address: "경기도 화성시 봉담읍 동화길 81",
+    lat: 37.2216,
+    lng: 126.9506,
+    phone: "031-000-4000",
+    type: "의원",
+    departments: "내과",
+  },
+  {
+    id: "hospital-005",
+    name: "병점365의원",
+    address: "경기도 화성시 병점중앙로 87",
+    lat: 37.2073,
+    lng: 127.0341,
+    phone: "031-000-5000",
+    type: "의원",
+    departments: "가정의학과, 일반진료",
+  },
+];
