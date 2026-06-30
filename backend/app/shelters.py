@@ -30,7 +30,22 @@ def _service_key() -> str:
 
 
 def _endpoint() -> str:
-    return os.getenv("SHELTER_API_URL", SHELTER_ENDPOINT).strip() or SHELTER_ENDPOINT
+    endpoint = os.getenv("SHELTER_API_URL", SHELTER_ENDPOINT).strip() or SHELTER_ENDPOINT
+    if not endpoint.startswith(("http://", "https://")):
+        raise ValueError("SHELTER_API_URL은 https://로 시작하는 전체 주소여야 합니다.")
+    return endpoint
+
+
+def _request_error_message(error: httpx.RequestError) -> str:
+    error_type = type(error).__name__
+
+    if error_type == "UnsupportedProtocol":
+        return "무더위쉼터 API 주소 형식이 올바르지 않습니다. SHELTER_API_URL 값을 확인해 주세요."
+
+    if error_type in {"ConnectTimeout", "ReadTimeout", "PoolTimeout", "TimeoutException"}:
+        return "무더위쉼터 API 응답이 지연되어 mockData를 사용합니다. 잠시 후 다시 확인해 주세요."
+
+    return f"무더위쉼터 API 연결 실패: {error_type}. Render 환경변수 SHELTER_API_URL을 확인해 주세요."
 
 
 def _fallback(message: str) -> dict[str, object]:
@@ -177,7 +192,13 @@ async def get_shelters() -> dict[str, object]:
         return _fallback("무더위쉼터 API 키가 없어 mockData를 사용합니다.")
 
     try:
-        async with httpx.AsyncClient(timeout=12) as client:
+        headers = {
+            "Accept": "application/json",
+            "User-Agent": "HwaseongCoolcareMVP/1.0",
+        }
+        timeout = httpx.Timeout(20.0, connect=10.0)
+
+        async with httpx.AsyncClient(timeout=timeout, headers=headers, follow_redirects=True) as client:
             response = await client.get(_endpoint(), params=_params(key))
             response.raise_for_status()
             payload = response.json()
@@ -202,7 +223,9 @@ async def get_shelters() -> dict[str, object]:
         }
     except httpx.HTTPStatusError as error:
         return _fallback(f"무더위쉼터 API 응답 오류 HTTP {error.response.status_code}")
-    except httpx.RequestError:
-        return _fallback("무더위쉼터 API 연결이 불안정해 mockData를 사용합니다.")
+    except httpx.RequestError as error:
+        return _fallback(_request_error_message(error))
+    except ValueError as error:
+        return _fallback(str(error))
     except Exception as error:
         return _fallback(f"무더위쉼터 API 처리 실패: {type(error).__name__}")
