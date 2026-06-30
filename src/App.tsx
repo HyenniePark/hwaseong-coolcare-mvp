@@ -47,7 +47,7 @@ import {
   recommendShelters,
   selectedSymptomsFromSeverity,
 } from "./lib/recommendation";
-import { getHospitalsWithFallback, getSheltersWithFallback } from "./services/dataService";
+import { fetchSheltersWithFallback, getHospitalsWithFallback, getSheltersWithFallback } from "./services/dataService";
 import { geocodeAddress, reverseGeocodePoint } from "./services/kakaoMapService";
 import { fetchWeatherWithFallback, type WeatherLoadResult } from "./services/weatherService";
 import type {
@@ -435,11 +435,25 @@ function App() {
     message: "날씨 데이터를 불러오는 중입니다.",
   });
 
-  const shelterDataset = useMemo(() => getSheltersWithFallback(), []);
+  const [shelterDataset, setShelterDataset] = useState(() => getSheltersWithFallback());
   const hospitalDataset = useMemo(() => getHospitalsWithFallback(), []);
   const shelters = shelterDataset.data;
   const hospitals = hospitalDataset.data;
   const weather = weatherResult.data;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchSheltersWithFallback().then((result) => {
+      if (!cancelled) {
+        setShelterDataset(result);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -1758,12 +1772,13 @@ function IntegrationStatusView({
           <p>프론트엔드: http://127.0.0.1:5173</p>
           <p>백엔드: {apiBaseUrl}</p>
           <p>백엔드 상태 확인: {apiBaseUrl === "미설정" ? "VITE_API_BASE_URL 필요" : apiBaseUrl + "/api/health"}</p>
+          <p>쉼터 API 확인: {apiBaseUrl === "미설정" ? "VITE_API_BASE_URL 필요" : apiBaseUrl + "/api/shelters"}</p>
         </div>
       </section>
 
       <section className="rounded-lg border border-orange-200 bg-orange-50 p-4 text-sm font-bold leading-6 text-stone-700">
         <p>
-          무더위쉼터 API 승인 전에는 쉼터 데이터가 mockData로 표시됩니다. 이 상태는 발표 안정성을 위한 정상 fallback입니다.
+          무더위쉼터 API가 실패하거나 응답이 비어 있으면 쉼터 데이터가 mockData로 표시됩니다. 이 상태는 발표 안정성을 위한 정상 fallback입니다.
         </p>
       </section>
     </section>

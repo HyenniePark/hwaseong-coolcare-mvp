@@ -9,6 +9,10 @@ services:
         sync: false
       - key: PUBLIC_DATA_SERVICE_KEY
         sync: false
+      - key: SHELTER_API_KEY
+        sync: false
+      - key: SHELTER_API_URL
+        value: https://www.safetydata.go.kr/V2/api/DSSP-IF-10942
       - key: KMA_BASE_NX
         value: 57
       - key: KMA_BASE_NY

@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .weather import get_weather
+from .shelters import get_shelters
 
 
 def _cors_origins() -> list[str]:
@@ -33,7 +34,7 @@ def root() -> dict[str, object]:
     return {
         "service": "Hwaseong Coolcare API",
         "status": "ok",
-        "endpoints": ["/api/health", "/api/weather"],
+        "endpoints": ["/api/health", "/api/weather", "/api/shelters"],
     }
 
 
@@ -45,3 +46,8 @@ def health() -> dict[str, str]:
 @app.get("/api/weather")
 async def weather() -> dict[str, object]:
     return await get_weather()
+
+
+@app.get("/api/shelters")
+async def shelters() -> dict[str, object]:
+    return await get_shelters()
