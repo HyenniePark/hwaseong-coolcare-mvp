@@ -282,7 +282,7 @@ const viewItems: Array<{
   icon: LucideIcon;
 }> = [
   { id: "shelter", label: "쉼터 찾기", easyLabel: "쉼터 찾기", icon: Home },
-  { id: "hospital", label: "자가 진단", easyLabel: "자가 진단", icon: Hospital },
+  { id: "hospital", label: "위험 신호 체크", easyLabel: "위험 신호 체크", icon: Hospital },
   { id: "account", label: "계정 정보", easyLabel: "내 정보", icon: UserRound },
   { id: "status", label: "연동 상태", easyLabel: "연동 상태", icon: Gauge },
   { id: "easy", label: "쉬운 안내", easyLabel: "큰 안내", icon: ShieldCheck },
@@ -296,7 +296,7 @@ const easyViewItems: Array<{
 }> = [
   { id: "easy", label: "쉬운 안내", easyLabel: "큰 안내", icon: ShieldCheck },
   { id: "shelter", label: "쉼터 찾기", easyLabel: "쉼터 찾기", icon: Home },
-  { id: "hospital", label: "자가 진단", easyLabel: "자가 진단", icon: Hospital },
+  { id: "hospital", label: "위험 신호 체크", easyLabel: "위험 신호 체크", icon: Hospital },
   { id: "account", label: "계정 정보", easyLabel: "내 정보", icon: UserRound },
 ];
 
@@ -395,15 +395,9 @@ function hospitalToCurrentStatus(status: HospitalSearchStatus): CurrentStatus {
 }
 
 function mergeRisk(a: ReturnType<typeof classifyRisk>, b: ReturnType<typeof classifyHospitalRisk>) {
-  if (a.level === "emergency" || b.level === "emergency") {
-    return a.level === "emergency" ? a : b;
-  }
+  const order = { normal: 0, caution: 1, danger: 2, emergency: 3 };
 
-  if (a.level === "caution" || b.level === "caution") {
-    return a.level === "caution" ? a : b;
-  }
-
-  return a;
+  return order[b.level] > order[a.level] ? b : a;
 }
 
 function App() {
@@ -621,6 +615,12 @@ function App() {
     setHospitalSubmitted(false);
   };
 
+  const openShelterResultsFromSignalCheck = () => {
+    setShelterSubmitted(true);
+    setDismissedEmergencyDialog(true);
+    setActiveView("shelterResult");
+  };
+
   const enableBasicMode = () => {
     setProfile({ ...profile, easyMode: false });
     setShowEasyPrompt(false);
@@ -762,6 +762,13 @@ function App() {
               setHospitalSubmitted(true);
               setActiveView("hospitalResult");
             }}
+            locationMode={locationMode}
+            locationDisplay={locationDisplay}
+            locationNote={locationNote}
+            selectedAddressLabel={selectedAddress?.label || ""}
+            requestLocation={requestLocation}
+            useActivityAreaLocation={useActivityAreaLocation}
+            useAddressLocation={useAddressLocation}
           />
         ) : (
           <HospitalFinderView
@@ -771,6 +778,13 @@ function App() {
               setHospitalSubmitted(true);
               setActiveView("hospitalResult");
             }}
+            locationMode={locationMode}
+            locationDisplay={locationDisplay}
+            locationNote={locationNote}
+            selectedAddressLabel={selectedAddress?.label || ""}
+            requestLocation={requestLocation}
+            useActivityAreaLocation={useActivityAreaLocation}
+            useAddressLocation={useAddressLocation}
           />
         )
       )}
@@ -780,6 +794,7 @@ function App() {
             risk={hospitalRisk}
             hospitals={hospitalRecommendations}
             onEdit={() => setActiveView("hospital")}
+            onOpenShelter={openShelterResultsFromSignalCheck}
           />
         ) : (
           <HospitalResultView
@@ -787,6 +802,7 @@ function App() {
             hospitals={hospitalRecommendations}
             weather={weatherResult}
             onEdit={() => setActiveView("hospital")}
+            onOpenShelter={openShelterResultsFromSignalCheck}
           />
         )
       )}
@@ -1166,7 +1182,7 @@ function SeniorEasyPrompt({
               쉬운모드를 사용할까요?
             </h2>
             <p className="mt-3 text-lg font-bold leading-8 text-stone-700">
-              큰 글씨와 큰 아이콘으로 쉼터, 자가 진단, 119 버튼을 더 쉽게 볼 수 있습니다.
+              큰 글씨와 큰 아이콘으로 쉼터, 위험 신호 체크, 119 버튼을 더 쉽게 볼 수 있습니다.
             </p>
           </div>
         </div>
@@ -1452,10 +1468,24 @@ function HospitalFinderView({
   status,
   setStatus,
   onSubmit,
+  locationMode,
+  locationDisplay,
+  locationNote,
+  selectedAddressLabel,
+  requestLocation,
+  useActivityAreaLocation,
+  useAddressLocation,
 }: {
   status: HospitalSearchStatus;
   setStatus: (status: HospitalSearchStatus) => void;
   onSubmit: () => void;
+  locationMode: LocationMode;
+  locationDisplay: string;
+  locationNote: string;
+  selectedAddressLabel: string;
+  requestLocation: () => void;
+  useActivityAreaLocation: () => void;
+  useAddressLocation: (address: AddressCandidate) => void;
 }) {
   const setSeverity = (symptom: SymptomId, value: number) => {
     setStatus({
@@ -1476,9 +1506,9 @@ function HospitalFinderView({
             <Hospital size={28} aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-xl font-black">자가 진단</h2>
+            <h2 className="text-xl font-black">온열질환 위험 신호 체크</h2>
             <p className="mt-2 text-sm leading-6 text-stone-700">
-              증상이 있는지 먼저 고르고, 있다고 체크한 증상만 강도를 입력합니다.
+              증상을 고르면 양호, 주의, 위험, 응급 단계와 필요한 다음 행동을 안내합니다.
             </p>
           </div>
         </div>
@@ -1565,9 +1595,19 @@ function HospitalFinderView({
           )}
         </FieldGroup>
 
+        <LocationSelector
+          mode={locationMode}
+          display={locationDisplay}
+          note={locationNote}
+          selectedAddressLabel={selectedAddressLabel}
+          onUseGps={requestLocation}
+          onUseActivityArea={useActivityAreaLocation}
+          onUseAddress={useAddressLocation}
+        />
+
         <button type="button" className="primary-button mt-5 w-full" onClick={onSubmit}>
           <Check size={18} aria-hidden="true" />
-          정보 제출하고 자가 진단 보기
+          정보 제출하고 위험 신호 결과 보기
         </button>
       </div>
     </section>
@@ -1578,10 +1618,24 @@ function EasyHospitalFinderView({
   status,
   setStatus,
   onSubmit,
+  locationMode,
+  locationDisplay,
+  locationNote,
+  selectedAddressLabel,
+  requestLocation,
+  useActivityAreaLocation,
+  useAddressLocation,
 }: {
   status: HospitalSearchStatus;
   setStatus: (status: HospitalSearchStatus) => void;
   onSubmit: () => void;
+  locationMode: LocationMode;
+  locationDisplay: string;
+  locationNote: string;
+  selectedAddressLabel: string;
+  requestLocation: () => void;
+  useActivityAreaLocation: () => void;
+  useAddressLocation: (address: AddressCandidate) => void;
 }) {
   const setSeverity = (symptom: SymptomId, value: number) => {
     setStatus({
@@ -1603,11 +1657,11 @@ function EasyHospitalFinderView({
           </div>
           <div>
             <p className="text-lg font-black text-river">큰 안내</p>
-            <h2 className="text-3xl font-black leading-10">자가 진단</h2>
+            <h2 className="text-3xl font-black leading-10">온열질환 위험 신호 체크</h2>
           </div>
         </div>
         <p className="mt-4 text-xl font-bold leading-9 text-stone-700">
-          지금 느끼는 증상을 고르면 가까운 병원 후보를 보여드립니다.
+          지금 느끼는 증상을 고르면 필요한 다음 행동을 크게 보여드립니다.
         </p>
       </div>
 
@@ -1697,9 +1751,19 @@ function EasyHospitalFinderView({
         </div>
       )}
 
+      <EasyLocationSelector
+        mode={locationMode}
+        display={locationDisplay}
+        note={locationNote}
+        selectedAddressLabel={selectedAddressLabel}
+        onUseGps={requestLocation}
+        onUseActivityArea={useActivityAreaLocation}
+        onUseAddress={useAddressLocation}
+      />
+
       <button type="button" className="primary-button min-h-20 w-full text-xl" onClick={onSubmit}>
         <Check size={28} aria-hidden="true" />
-        자가 진단 보기
+        위험 신호 결과 보기
       </button>
     </section>
   );
@@ -1871,28 +1935,77 @@ function HospitalResultView({
   hospitals,
   weather,
   onEdit,
+  onOpenShelter,
 }: {
   risk: ReturnType<typeof classifyHospitalRisk>;
   hospitals: ReturnType<typeof recommendHospitals>;
   weather: WeatherLoadResult;
   onEdit: () => void;
+  onOpenShelter: () => void;
 }) {
+  const showHospitalRecommendations = risk.level === "danger" || risk.level === "emergency";
+
   return (
     <section className="space-y-4">
-      <ResultHeader title="자가 진단 결과" onEdit={onEdit} />
+      <ResultHeader title="위험 신호 체크 결과" onEdit={onEdit} />
       <WeatherStrip result={weather} />
       <RiskPanel risk={risk} />
+
       {risk.level === "emergency" && (
-        <a href="tel:119" className="danger-button w-full">
-          <Siren size={18} aria-hidden="true" />
-          119 전화
-        </a>
+        <div className="rounded-lg border border-rose-200 bg-rose-50 p-4">
+          <div className="flex items-start gap-3">
+            <Siren className="mt-1 text-alert" size={22} aria-hidden="true" />
+            <p className="text-sm font-black leading-6 text-alert">
+              위급한 경우 위치 결과를 기다리지 말고 119 상담을 권장합니다.
+            </p>
+          </div>
+        </div>
       )}
-      <div className="space-y-3">
-        {hospitals.map((item) => (
-          <HospitalCard key={item.hospital.id} item={item} />
-        ))}
+
+      <div className={clsx("grid gap-2", risk.level === "danger" && "sm:grid-cols-2")}>
+        {(risk.level === "normal" || risk.level === "caution" || risk.level === "danger") && (
+          <button type="button" className="primary-button w-full" onClick={onOpenShelter}>
+            <Home size={18} aria-hidden="true" />
+            가까운 쉼터 보기
+          </button>
+        )}
+        {risk.level === "danger" && (
+          <a href="#hospital-recommendations" className="secondary-button w-full">
+            <Hospital size={18} aria-hidden="true" />
+            병원 찾기
+          </a>
+        )}
+        {risk.level === "emergency" && (
+          <>
+            <a href="#hospital-recommendations" className="primary-button w-full">
+              <Hospital size={18} aria-hidden="true" />
+              병원 찾기
+            </a>
+            <a href="tel:119" className="danger-button w-full">
+              <Siren size={18} aria-hidden="true" />
+              119 전화
+            </a>
+          </>
+        )}
       </div>
+
+      {showHospitalRecommendations && (
+        <div id="hospital-recommendations" className="space-y-3 scroll-mt-4">
+          <div className="surface">
+            <h3 className="text-lg font-black">증상과 가까운 의료기관 3곳</h3>
+            <p className="mt-2 text-sm leading-6 text-stone-700">
+              선택한 위치와 증상 정보를 기준으로 가까운 후보를 정렬했습니다. 방문 전 전화 상담을 권장합니다.
+            </p>
+          </div>
+          {hospitals.length > 0 ? (
+            hospitals.map((item) => (
+              <HospitalCard key={item.hospital.id} item={item} />
+            ))
+          ) : (
+            <EmptyResult icon={Hospital} title="추천 병원 없음" body="표시할 의료기관 데이터가 없습니다." />
+          )}
+        </div>
+      )}
     </section>
   );
 }
@@ -1909,7 +2022,7 @@ function EasyShelterResultView({
   onOpenHospital: () => void;
 }) {
   const first = recommendations[0];
-  const RiskIcon = risk.level === "emergency" ? Siren : risk.level === "caution" ? AlertTriangle : ShieldCheck;
+  const RiskIcon = risk.level === "emergency" ? Siren : risk.level === "danger" || risk.level === "caution" ? AlertTriangle : ShieldCheck;
 
   return (
     <section className="space-y-4">
@@ -1918,9 +2031,9 @@ function EasyShelterResultView({
         다시 입력하기
       </button>
 
-      <div className={clsx("surface", risk.level === "emergency" && "border-rose-300 bg-rose-50")}>
+      <div className={clsx("surface", risk.level === "emergency" && "border-rose-300 bg-rose-50", risk.level === "danger" && "border-orange-300 bg-orange-50")}>
         <div className="flex items-center gap-4">
-          <div className={clsx("rounded-lg p-4", risk.level === "emergency" ? "bg-rose-100 text-alert" : "bg-orange-50 text-cool")}>
+          <div className={clsx("rounded-lg p-4", risk.level === "emergency" ? "bg-rose-100 text-alert" : risk.level === "danger" ? "bg-orange-100 text-heat" : "bg-orange-50 text-cool")}>
             <RiskIcon size={46} aria-hidden="true" />
           </div>
           <div>
@@ -1963,7 +2076,7 @@ function EasyShelterResultView({
             </a>
             <button type="button" className="secondary-button min-h-16 w-full text-lg" onClick={onOpenHospital}>
               <Hospital size={24} aria-hidden="true" />
-              자가 진단 보기
+              위험 신호 체크
             </button>
           </div>
         </article>
@@ -1991,13 +2104,16 @@ function EasyHospitalResultView({
   risk,
   hospitals,
   onEdit,
+  onOpenShelter,
 }: {
   risk: ReturnType<typeof classifyHospitalRisk>;
   hospitals: ReturnType<typeof recommendHospitals>;
   onEdit: () => void;
+  onOpenShelter: () => void;
 }) {
   const first = hospitals[0];
-  const RiskIcon = risk.level === "emergency" ? Siren : risk.level === "caution" ? AlertTriangle : ShieldCheck;
+  const RiskIcon = risk.level === "emergency" ? Siren : risk.level === "danger" || risk.level === "caution" ? AlertTriangle : ShieldCheck;
+  const showHospitalRecommendations = risk.level === "danger" || risk.level === "emergency";
 
   return (
     <section className="space-y-4">
@@ -2006,13 +2122,13 @@ function EasyHospitalResultView({
         다시 입력하기
       </button>
 
-      <div className={clsx("surface", risk.level === "emergency" && "border-rose-300 bg-rose-50")}>
+      <div className={clsx("surface", risk.level === "emergency" && "border-rose-300 bg-rose-50", risk.level === "danger" && "border-orange-300 bg-orange-50")}>
         <div className="flex items-center gap-4">
-          <div className={clsx("rounded-lg p-4", risk.level === "emergency" ? "bg-rose-100 text-alert" : "bg-blue-50 text-river")}>
+          <div className={clsx("rounded-lg p-4", risk.level === "emergency" ? "bg-rose-100 text-alert" : risk.level === "danger" ? "bg-orange-100 text-heat" : "bg-blue-50 text-river")}>
             <RiskIcon size={46} aria-hidden="true" />
           </div>
           <div>
-            <p className="text-base font-black text-river">자가 진단 결과</p>
+            <p className="text-base font-black text-river">위험 신호 체크 결과</p>
             <h2 className="mt-1 text-3xl font-black leading-9">{risk.title}</h2>
           </div>
         </div>
@@ -2020,14 +2136,45 @@ function EasyHospitalResultView({
       </div>
 
       {risk.level === "emergency" && (
-        <a href="tel:119" className="danger-button min-h-16 w-full text-lg">
-          <Siren size={24} aria-hidden="true" />
-          119 전화
-        </a>
+        <div className="rounded-lg border-2 border-rose-300 bg-rose-50 p-5">
+          <div className="flex items-start gap-4">
+            <Siren className="mt-1 text-alert" size={42} aria-hidden="true" />
+            <p className="text-xl font-black leading-9 text-alert">
+              위급한 경우 위치 결과를 기다리지 말고 119 상담을 권장합니다.
+            </p>
+          </div>
+        </div>
       )}
 
-      {first ? (
-        <article className="rounded-lg border-2 border-river bg-white p-5 shadow-soft">
+      <div className="grid gap-3">
+        {(risk.level === "normal" || risk.level === "caution" || risk.level === "danger") && (
+          <button type="button" className="primary-button min-h-16 w-full text-lg" onClick={onOpenShelter}>
+            <Home size={24} aria-hidden="true" />
+            가까운 쉼터 보기
+          </button>
+        )}
+        {risk.level === "danger" && (
+          <a href="#easy-hospital-recommendations" className="secondary-button min-h-16 w-full text-lg">
+            <Hospital size={24} aria-hidden="true" />
+            병원 찾기
+          </a>
+        )}
+        {risk.level === "emergency" && (
+          <>
+            <a href="#easy-hospital-recommendations" className="primary-button min-h-16 w-full text-lg">
+              <Hospital size={24} aria-hidden="true" />
+              병원 찾기
+            </a>
+            <a href="tel:119" className="danger-button min-h-16 w-full text-lg">
+              <Siren size={24} aria-hidden="true" />
+              119 전화
+            </a>
+          </>
+        )}
+      </div>
+
+      {showHospitalRecommendations && first ? (
+        <article id="easy-hospital-recommendations" className="scroll-mt-4 rounded-lg border-2 border-river bg-white p-5 shadow-soft">
           <div className="flex items-start gap-4">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-river">
               <Hospital size={38} aria-hidden="true" />
@@ -2050,11 +2197,11 @@ function EasyHospitalResultView({
             </a>
           </div>
         </article>
-      ) : (
+      ) : showHospitalRecommendations ? (
         <EmptyResult icon={Hospital} title="추천 병원 없음" body="표시할 의료기관 데이터가 없습니다." />
-      )}
+      ) : null}
 
-      {hospitals.length > 1 && (
+      {showHospitalRecommendations && hospitals.length > 1 && (
         <div className="space-y-2">
           <h3 className="text-xl font-black">다른 병원</h3>
           {hospitals.slice(1).map((item) => (
@@ -2119,13 +2266,13 @@ function EasyModeView({
   onOpenShelter: () => void;
   onOpenHospital: () => void;
 }) {
-  const RiskIcon = risk.level === "emergency" ? Siren : risk.level === "caution" ? AlertTriangle : ShieldCheck;
+  const RiskIcon = risk.level === "emergency" ? Siren : risk.level === "danger" || risk.level === "caution" ? AlertTriangle : ShieldCheck;
 
   return (
     <section className="space-y-4">
-      <div className={clsx("surface", risk.level === "emergency" && "border-rose-300 bg-rose-50")}> 
+      <div className={clsx("surface", risk.level === "emergency" && "border-rose-300 bg-rose-50", risk.level === "danger" && "border-orange-300 bg-orange-50")}>
         <div className="flex items-center gap-4">
-          <div className={clsx("rounded-lg p-4", risk.level === "emergency" ? "bg-rose-100 text-alert" : "bg-orange-50 text-cool")}>
+          <div className={clsx("rounded-lg p-4", risk.level === "emergency" ? "bg-rose-100 text-alert" : risk.level === "danger" ? "bg-orange-100 text-heat" : "bg-orange-50 text-cool")}>
             <RiskIcon size={42} aria-hidden="true" />
           </div>
           <div>
@@ -2147,7 +2294,7 @@ function EasyModeView({
         <button type="button" className="easy-action" onClick={onOpenHospital}>
           <Hospital size={38} aria-hidden="true" />
           <span>
-            <strong>자가 진단</strong>
+            <strong>위험 신호 체크</strong>
             <small>병원 후보 확인</small>
           </span>
         </button>
@@ -2316,7 +2463,7 @@ function EasyLocationSelector({
     <div className="surface">
       <h3 className="text-2xl font-black">위치 기준</h3>
       <p className="mt-2 text-lg font-bold leading-8 text-stone-700">
-        어디를 기준으로 쉼터를 찾을지 고르세요.
+        어디를 기준으로 추천을 볼지 고르세요.
       </p>
       <div className="mt-4 grid gap-3">
         <EasyChoiceCard
@@ -2605,17 +2752,19 @@ function WeatherStrip({ result }: { result: WeatherLoadResult }) {
 }
 
 function RiskPanel({ risk, showSignals = true }: { risk: RiskResult; showSignals?: boolean }) {
+  const isElevated = risk.level === "danger" || risk.level === "caution";
+
   return (
     <div
       className={clsx(
         "surface",
         risk.level === "emergency" && "border-rose-300 bg-rose-50",
-        risk.level === "caution" && "border-orange-200 bg-orange-50",
+        isElevated && "border-orange-200 bg-orange-50",
       )}
     >
       <div className="flex items-start gap-3">
         <AlertTriangle
-          className={risk.level === "emergency" ? "text-alert" : "text-heat"}
+          className={risk.level === "emergency" ? "text-alert" : risk.level === "normal" ? "text-cool" : "text-heat"}
           size={24}
           aria-hidden="true"
         />
@@ -2778,7 +2927,7 @@ function EasyEnableDialog({
               쉬운 안내를 켤까요?
             </h2>
             <p className="mt-3 text-lg font-bold leading-8 text-stone-700">
-              큰 글씨와 큰 아이콘으로 쉼터, 자가 진단, 119 버튼을 먼저 보여줍니다.
+              큰 글씨와 큰 아이콘으로 쉼터, 위험 신호 체크, 119 버튼을 먼저 보여줍니다.
             </p>
           </div>
         </div>
@@ -2815,7 +2964,7 @@ function EmergencyDialog({
           </div>
           <div>
             <h2 id="emergency-dialog-title" className="text-xl font-black">
-              자가 진단으로 이동할까요?
+              위험 신호 체크로 이동할까요?
             </h2>
             <p className="mt-2 text-sm leading-6 text-stone-700">
               쉼터 찾기에서 응급 위험 신호가 체크되었습니다. 119 상담 또는 병원 후보 확인을 먼저 권장합니다.
@@ -2825,7 +2974,7 @@ function EmergencyDialog({
         <div className="mt-5 grid gap-2">
           <button type="button" className="danger-button w-full" onClick={onGoHospital}>
             <Hospital size={18} aria-hidden="true" />
-            자가 진단으로 이동
+            위험 신호 체크로 이동
           </button>
           <button type="button" className="secondary-button w-full" onClick={onStayShelter}>
             쉼터 계속 보기

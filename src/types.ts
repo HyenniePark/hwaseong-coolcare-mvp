@@ -6,7 +6,7 @@ export type SpecialTrait = "outdoorWorker" | "limitedMobility";
 
 export type ActivityStatus = "indoor" | "outdoor" | "planned";
 
-export type RiskLevel = "normal" | "caution" | "emergency";
+export type RiskLevel = "normal" | "caution" | "danger" | "emergency";
 
 export type SymptomId =
   | "dizziness"

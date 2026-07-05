@@ -245,12 +245,15 @@ export function classifyHospitalRisk(
 ): RiskResult {
   const severities = status.severities;
   const emergencySignals = emergencySymptoms.filter((symptom) => severities[symptom] >= 3);
+  const selectedSymptoms = selectedSymptomsFromSeverity(severities);
+  const anyEmergencySignal = emergencySymptoms.some((symptom) => severities[symptom] > 0);
+  const maxSeverity = Math.max(0, ...Object.values(severities));
 
   if (status.emergencyFromShelter || emergencySignals.length > 0) {
     return {
       level: "emergency",
-      title: "응급 위험 신호가 있습니다",
-      guidance: "119 상담을 먼저 권장합니다. 가능한 경우 가까운 의료기관에 전화해 안내를 받으세요.",
+      title: "응급",
+      guidance: "의식 흐림, 고열, 호흡곤란, 반복 구토 등 긴급 신호가 있다면 위치 결과를 기다리지 말고 119 상담을 권장합니다.",
       signals: status.emergencyFromShelter
         ? ["쉼터 찾기에서 응급 위험 신호 체크"]
         : emergencySignals.map((symptom) => symptomLabels[symptom]),
@@ -271,30 +274,45 @@ export function classifyHospitalRisk(
 
   if (profile.age >= 65) {
     score += 2;
+    signals.push("고령자");
   }
 
   if (profile.hasChronicDisease) {
     score += 2;
+    signals.push("만성질환 있음");
   }
 
-  if (weatherStressScore(weather) >= 5) {
+  const weatherScore = weatherStressScore(weather);
+  if (weatherScore >= 5) {
     score += 1;
+    signals.push("현재 날씨 위험 높음");
   }
 
-  if (score >= 6) {
+  const uniqueSignals = Array.from(new Set(signals));
+
+  if (anyEmergencySignal || maxSeverity >= 4 || score >= 6) {
+    return {
+      level: "danger",
+      title: "위험",
+      guidance: "온열질환 위험 신호가 있어 주의가 필요합니다. 가까운 쉼터로 이동하고 의료기관 상담 후보도 함께 확인하세요.",
+      signals: uniqueSignals,
+    };
+  }
+
+  if (selectedSymptoms.length > 0 || score >= 2 || weatherScore >= 3) {
     return {
       level: "caution",
-      title: "의료기관 상담을 권장합니다",
-      guidance: "증상 강도가 높습니다. 가까운 병원 후보를 확인하고 전화 상담을 권장합니다.",
-      signals,
+      title: "주의",
+      guidance: "더위 노출을 줄이고 시원한 곳에서 휴식이 필요합니다. 가까운 쉼터를 먼저 확인하세요.",
+      signals: uniqueSignals,
     };
   }
 
   return {
     level: "normal",
-    title: "예방 관리가 필요합니다",
-    guidance: "증상이 약하면 수분 섭취와 휴식을 먼저 해주세요. 증상이 계속되면 상담을 권장합니다.",
-    signals,
+    title: "양호",
+    guidance: "현재 입력 정보 기준 큰 위험 신호는 낮아 보여요. 수분 섭취와 휴식을 유지하세요.",
+    signals: uniqueSignals,
   };
 }
 
