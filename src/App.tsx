@@ -304,7 +304,6 @@ const viewItems: Array<{
   { id: "shelter", label: "쉼터 찾기", easyLabel: "쉼터 찾기", icon: Home },
   { id: "hospital", label: "위험 신호 체크", easyLabel: "위험 신호 체크", icon: Hospital },
   { id: "account", label: "계정 정보", easyLabel: "내 정보", icon: UserRound },
-  { id: "status", label: "연동 상태", easyLabel: "연동 상태", icon: Gauge },
   { id: "easy", label: "쉬운 안내", easyLabel: "큰 안내", icon: ShieldCheck },
 ];
 
