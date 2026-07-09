@@ -73,7 +73,6 @@ type LocationSelectorControlProps = {
   locationMode: LocationMode;
   locationDisplay: string;
   locationNote: string;
-  selectedAddressLabel: string;
   requestLocation: () => void;
   useActivityAreaLocation: () => void;
   useAddressLocation: (address: AddressCandidate) => void;
@@ -730,7 +729,6 @@ function App() {
             locationMode={locationMode}
             locationDisplay={locationDisplay}
             locationNote={locationNote}
-            selectedAddressLabel={selectedAddress?.label || ""}
             requestLocation={requestLocation}
             useActivityAreaLocation={useActivityAreaLocation}
             useAddressLocation={useAddressLocation}
@@ -748,7 +746,6 @@ function App() {
             locationMode={locationMode}
             locationDisplay={locationDisplay}
             locationNote={locationNote}
-            selectedAddressLabel={selectedAddress?.label || ""}
             requestLocation={requestLocation}
             useActivityAreaLocation={useActivityAreaLocation}
             useAddressLocation={useAddressLocation}
@@ -803,7 +800,6 @@ function App() {
             locationMode={locationMode}
             locationDisplay={locationDisplay}
             locationNote={locationNote}
-            selectedAddressLabel={selectedAddress?.label || ""}
             requestLocation={requestLocation}
             useActivityAreaLocation={useActivityAreaLocation}
             useAddressLocation={useAddressLocation}
@@ -818,7 +814,6 @@ function App() {
             locationMode={locationMode}
             locationDisplay={locationDisplay}
             locationNote={locationNote}
-            selectedAddressLabel={selectedAddress?.label || ""}
             requestLocation={requestLocation}
             useActivityAreaLocation={useActivityAreaLocation}
             useAddressLocation={useAddressLocation}
@@ -1215,7 +1210,6 @@ function ShelterFinderView({
   locationMode,
   locationDisplay,
   locationNote,
-  selectedAddressLabel,
   requestLocation,
   useActivityAreaLocation,
   useAddressLocation,
@@ -1227,7 +1221,6 @@ function ShelterFinderView({
   locationMode: LocationMode;
   locationDisplay: string;
   locationNote: string;
-  selectedAddressLabel: string;
   requestLocation: () => void;
   useActivityAreaLocation: () => void;
   useAddressLocation: (address: AddressCandidate) => void;
@@ -1255,7 +1248,6 @@ function ShelterFinderView({
           mode={locationMode}
           display={locationDisplay}
           note={locationNote}
-          selectedAddressLabel={selectedAddressLabel}
           onUseGps={requestLocation}
           onUseActivityArea={useActivityAreaLocation}
           onUseAddress={useAddressLocation}
@@ -1293,7 +1285,6 @@ function EasyShelterFinderView({
   locationMode,
   locationDisplay,
   locationNote,
-  selectedAddressLabel,
   requestLocation,
   useActivityAreaLocation,
   useAddressLocation,
@@ -1304,7 +1295,6 @@ function EasyShelterFinderView({
   locationMode: LocationMode;
   locationDisplay: string;
   locationNote: string;
-  selectedAddressLabel: string;
   requestLocation: () => void;
   useActivityAreaLocation: () => void;
   useAddressLocation: (address: AddressCandidate) => void;
@@ -1334,7 +1324,6 @@ function EasyShelterFinderView({
         mode={locationMode}
         display={locationDisplay}
         note={locationNote}
-        selectedAddressLabel={selectedAddressLabel}
         onUseGps={requestLocation}
         onUseActivityArea={useActivityAreaLocation}
         onUseAddress={useAddressLocation}
@@ -1805,7 +1794,6 @@ function HospitalResultView({
   locationMode,
   locationDisplay,
   locationNote,
-  selectedAddressLabel,
   requestLocation,
   useActivityAreaLocation,
   useAddressLocation,
@@ -1931,7 +1919,6 @@ function HospitalResultView({
             mode={locationMode}
             display={locationDisplay}
             note={locationNote}
-            selectedAddressLabel={selectedAddressLabel}
             onUseGps={requestLocation}
             onUseActivityArea={useActivityAreaLocation}
             onUseAddress={useAddressLocation}
@@ -2046,7 +2033,6 @@ function EasyHospitalResultView({
   locationMode,
   locationDisplay,
   locationNote,
-  selectedAddressLabel,
   requestLocation,
   useActivityAreaLocation,
   useAddressLocation,
@@ -2218,7 +2204,6 @@ function EasyHospitalResultView({
             mode={locationMode}
             display={locationDisplay}
             note={locationNote}
-            selectedAddressLabel={selectedAddressLabel}
             onUseGps={requestLocation}
             onUseActivityArea={useActivityAreaLocation}
             onUseAddress={useAddressLocation}
@@ -2407,7 +2392,6 @@ function EasyLocationSelector({
   mode,
   display,
   note,
-  selectedAddressLabel,
   onUseGps,
   onUseActivityArea,
   onUseAddress,
@@ -2415,7 +2399,6 @@ function EasyLocationSelector({
   mode: LocationMode;
   display: string;
   note: string;
-  selectedAddressLabel: string;
   onUseGps: () => void;
   onUseActivityArea: () => void;
   onUseAddress: (address: AddressCandidate) => void;
@@ -2489,7 +2472,6 @@ function LocationSelector({
   mode,
   display,
   note,
-  selectedAddressLabel,
   onUseGps,
   onUseActivityArea,
   onUseAddress,
@@ -2497,7 +2479,6 @@ function LocationSelector({
   mode: LocationMode;
   display: string;
   note: string;
-  selectedAddressLabel: string;
   onUseGps: () => void;
   onUseActivityArea: () => void;
   onUseAddress: (address: AddressCandidate) => void;
