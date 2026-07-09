@@ -22,7 +22,6 @@ export type SymptomSeverity = Record<SymptomId, number>;
 
 export interface UserProfile {
   displayName: string;
-  phone: string;
   homeGu: string;
   homeArea: string;
   age: number;

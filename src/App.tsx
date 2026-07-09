@@ -322,7 +322,6 @@ const easyViewItems: Array<{
 
 const initialProfile: UserProfile = {
   displayName: "",
-  phone: "",
   homeGu: "",
   homeArea: "",
   age: 0,
@@ -996,33 +995,21 @@ function AccountView({
           />
         </FieldGroup>
 
-        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label>
-            <span className="mb-2 block text-sm font-black text-stone-700">휴대폰 번호</span>
-            <input
-              value={profile.phone}
-              onChange={(event) => setField("phone", event.target.value)}
-              placeholder="선택 입력"
-              className="min-h-12 w-full rounded-lg border border-line px-3 text-base"
-            />
-          </label>
-          <label>
-            <span className="mb-2 block text-sm font-black text-stone-700">나이 <RequiredMark /></span>
-            <input
-              type="number"
-              inputMode="numeric"
-              min="0"
-              max="120"
-              value={profile.age === 0 ? "" : String(profile.age)}
-              onChange={(event) => {
-                const rawValue = event.target.value;
-                const nextAge = rawValue === "" ? 0 : Math.min(120, Math.max(0, Number(rawValue)));
-                setField("age", Number.isFinite(nextAge) ? nextAge : 0);
-              }}
-              className="min-h-12 w-full rounded-lg border border-line px-3 text-base"
-            />
-          </label>
-        </div>
+        <FieldGroup label="나이" required>
+          <input
+            type="number"
+            inputMode="numeric"
+            min="0"
+            max="120"
+            value={profile.age === 0 ? "" : String(profile.age)}
+            onChange={(event) => {
+              const rawValue = event.target.value;
+              const nextAge = rawValue === "" ? 0 : Math.min(120, Math.max(0, Number(rawValue)));
+              setField("age", Number.isFinite(nextAge) ? nextAge : 0);
+            }}
+            className="min-h-12 w-full rounded-lg border border-line px-3 text-base"
+          />
+        </FieldGroup>
 
         <FieldGroup label="주 활동 지역">
           <div className="grid gap-3">
