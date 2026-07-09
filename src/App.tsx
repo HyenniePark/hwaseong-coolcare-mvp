@@ -304,7 +304,7 @@ const viewItems: Array<{
   { id: "shelter", label: "쉼터 찾기", easyLabel: "쉼터 찾기", icon: Home },
   { id: "hospital", label: "위험 신호 체크", easyLabel: "위험 신호 체크", icon: Hospital },
   { id: "account", label: "계정 정보", easyLabel: "내 정보", icon: UserRound },
-  { id: "easy", label: "쉬운 안내", easyLabel: "큰 안내", icon: ShieldCheck },
+  { id: "easy", label: "큰글씨 모드", easyLabel: "큰글씨", icon: ShieldCheck },
 ];
 
 const easyViewItems: Array<{
@@ -313,7 +313,7 @@ const easyViewItems: Array<{
   easyLabel: string;
   icon: LucideIcon;
 }> = [
-  { id: "easy", label: "쉬운 안내", easyLabel: "큰 안내", icon: ShieldCheck },
+  { id: "easy", label: "큰글씨 모드", easyLabel: "큰글씨", icon: ShieldCheck },
   { id: "shelter", label: "쉼터 찾기", easyLabel: "쉼터 찾기", icon: Home },
   { id: "hospital", label: "위험 신호 체크", easyLabel: "위험 신호 체크", icon: Hospital },
   { id: "account", label: "계정 정보", easyLabel: "내 정보", icon: UserRound },
@@ -381,8 +381,24 @@ function mergeRisk(a: ReturnType<typeof classifyRisk>, b: ReturnType<typeof clas
   return order[b.level] > order[a.level] ? b : a;
 }
 
+function debugViewFromHash(): ViewId | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.location.hash === "#status" ? "status" : null;
+}
+
+function clearDebugHash() {
+  if (typeof window === "undefined" || window.location.hash !== "#status") {
+    return;
+  }
+
+  window.history.replaceState(null, "", window.location.pathname + window.location.search);
+}
+
 function App() {
-  const [activeView, setActiveView] = useState<ViewId>("account");
+  const [activeView, setActiveView] = useState<ViewId>(() => debugViewFromHash() || "account");
   const [menuOpen, setMenuOpen] = useState(false);
   const [profile, setProfile] = useState<UserProfile>(initialProfile);
   const [shelterStatus, setShelterStatus] = useState<ShelterSearchStatus>(initialShelterStatus);
@@ -442,6 +458,24 @@ function App() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    const openDebugView = () => {
+      const debugView = debugViewFromHash();
+
+      if (!debugView) {
+        return;
+      }
+
+      setActiveView(debugView);
+      setMenuOpen(false);
+    };
+
+    openDebugView();
+    window.addEventListener("hashchange", openDebugView);
+
+    return () => window.removeEventListener("hashchange", openDebugView);
   }, []);
   const shelterCurrentStatus = useMemo(() => shelterToCurrentStatus(shelterStatus), [shelterStatus]);
   const hospitalCurrentStatus = useMemo(() => hospitalToCurrentStatus(hospitalStatus), [hospitalStatus]);
@@ -618,6 +652,10 @@ function App() {
       return;
     }
 
+    if (view !== "status") {
+      clearDebugHash();
+    }
+
     setActiveView(view);
     setMenuOpen(false);
   };
@@ -642,7 +680,7 @@ function App() {
               <h1 className="mt-1 text-3xl font-black text-ink">화성 쿨케어</h1>
               <p className="mt-2 text-sm leading-6 text-stone-700">
                 {profile.easyMode
-                  ? "큰 아이콘으로 지금 필요한 행동을 먼저 보여줍니다."
+                  ? "큰글씨와 큰 아이콘으로 지금 필요한 행동을 먼저 보여줍니다."
                   : "왼쪽 메뉴에서 필요한 화면을 열어 추천을 확인합니다."}
               </p>
             </div>
@@ -1283,7 +1321,7 @@ function EasyShelterFinderView({
             <Home size={38} aria-hidden="true" />
           </div>
           <div>
-            <p className="text-lg font-black text-cool">큰 안내</p>
+            <p className="text-lg font-black text-cool">큰글씨 모드</p>
             <h2 className="text-3xl font-black leading-10">쉼터 찾기</h2>
           </div>
         </div>
@@ -1488,7 +1526,7 @@ function EasyHospitalFinderView({
             <Hospital size={38} aria-hidden="true" />
           </div>
           <div>
-            <p className="text-lg font-black text-river">큰 안내</p>
+            <p className="text-lg font-black text-river">큰글씨 모드</p>
             <h2 className="text-3xl font-black leading-10">온열질환 위험 신호 체크</h2>
           </div>
         </div>
@@ -2751,14 +2789,14 @@ function EasyEnableDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 px-4" role="dialog" aria-modal="true" aria-labelledby="easy-dialog-title">
       <div className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-soft">
-        <DialogCloseButton onClick={onClose} label="쉬운 안내 팝업 닫기" />
+        <DialogCloseButton onClick={onClose} label="큰글씨 모드 팝업 닫기" />
         <div className="flex items-start gap-4 pr-10">
           <div className="rounded-lg bg-orange-50 p-4 text-cool">
             <ShieldCheck size={42} aria-hidden="true" />
           </div>
           <div>
             <h2 id="easy-dialog-title" className="text-2xl font-black leading-8">
-              쉬운 안내를 켤까요?
+              큰글씨 모드를 켤까요?
             </h2>
             <p className="mt-3 text-lg font-bold leading-8 text-stone-700">
               큰 글씨와 큰 아이콘으로 쉼터, 위험 신호 체크, 119 버튼을 먼저 보여줍니다.
@@ -2768,7 +2806,7 @@ function EasyEnableDialog({
         <div className="mt-6 grid gap-3">
           <button type="button" className="primary-button min-h-16 w-full text-lg" onClick={onEnable}>
             <ShieldCheck size={24} aria-hidden="true" />
-            쉬운 안내 켜기
+            큰글씨 모드 켜기
           </button>
           <button type="button" className="secondary-button min-h-16 w-full text-lg" onClick={onClose}>
             기본 모드로 계속 보기
