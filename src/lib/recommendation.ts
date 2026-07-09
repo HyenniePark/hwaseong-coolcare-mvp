@@ -50,28 +50,56 @@ export function selectedSymptomsFromSeverity(severities: SymptomSeverity): Sympt
     .map(([symptom]) => symptom);
 }
 
+function apparentTemperatureC(temperatureC: number, humidityPercent: number) {
+  if (temperatureC < 27) {
+    return temperatureC;
+  }
+
+  const humidity = Math.min(100, Math.max(0, humidityPercent));
+  const temperatureF = temperatureC * 1.8 + 32;
+  const heatIndexF =
+    -42.379 +
+    2.04901523 * temperatureF +
+    10.14333127 * humidity -
+    0.22475541 * temperatureF * humidity -
+    0.00683783 * temperatureF * temperatureF -
+    0.05481717 * humidity * humidity +
+    0.00122874 * temperatureF * temperatureF * humidity +
+    0.00085282 * temperatureF * humidity * humidity -
+    0.00000199 * temperatureF * temperatureF * humidity * humidity;
+
+  return (heatIndexF - 32) / 1.8;
+}
+
+export function weatherHeatRiskInfo(weather: WeatherLike = mockWeather) {
+  const apparent = apparentTemperatureC(weather.temperatureC, weather.humidityPercent);
+  const reference = Math.max(weather.temperatureC, apparent);
+
+  if (weather.temperatureC >= 35 || reference >= 38) {
+    return { label: "위험", score: 5 };
+  }
+
+  if (weather.temperatureC >= 33 || reference >= 35) {
+    return { label: "높음", score: 4 };
+  }
+
+  if (weather.temperatureC >= 31 || reference >= 33) {
+    return { label: "주의", score: 3 };
+  }
+
+  if (weather.temperatureC >= 28 || reference >= 30) {
+    return { label: "관심", score: 1 };
+  }
+
+  return { label: "낮음", score: 0 };
+}
+
+export function weatherHeatRiskLabel(weather: WeatherLike = mockWeather) {
+  return weatherHeatRiskInfo(weather).label;
+}
+
 function weatherStressScore(weather: WeatherLike = mockWeather) {
-  let score = 0;
-
-  if (weather.temperatureC >= 35) {
-    score += 3;
-  } else if (weather.temperatureC >= 33) {
-    score += 2;
-  } else if (weather.temperatureC >= 30) {
-    score += 1;
-  }
-
-  if (weather.humidityPercent >= 75) {
-    score += 2;
-  } else if (weather.humidityPercent >= 65) {
-    score += 1;
-  }
-
-  if (weather.heatRisk === "높음") {
-    score += 2;
-  }
-
-  return score;
+  return weatherHeatRiskInfo(weather).score;
 }
 
 function profileVulnerabilityScore(profile: UserProfile, status: CurrentStatus) {

@@ -46,6 +46,7 @@ import {
   recommendHospitals,
   recommendShelters,
   selectedSymptomsFromSeverity,
+  weatherHeatRiskLabel,
 } from "./lib/recommendation";
 import { fetchSheltersWithFallback, getHospitalsWithFallback, getSheltersWithFallback } from "./services/dataService";
 import { geocodeAddress, reverseGeocodePoint } from "./services/kakaoMapService";
@@ -1944,7 +1945,7 @@ function HospitalResultView({
         <ResultHeader title="병원 추천 결과" onEdit={onEdit} showEdit={false} />
         <WeatherStrip result={weather} />
         <RiskPanel risk={risk} showSignals={false} />
-        <div className="grid gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 shadow-soft">
+        <div className="grid gap-2 rounded-lg border border-orange-200 bg-orange-50 p-3 shadow-soft">
           <button type="button" className="secondary-button w-full" onClick={onEdit}>
             <ArrowLeft size={18} aria-hidden="true" />
             증상 다시 선택
@@ -2191,7 +2192,7 @@ function EasyHospitalResultView({
           </p>
         </div>
 
-        <div className="grid gap-3 rounded-lg border-2 border-blue-200 bg-blue-50 p-3 shadow-soft">
+        <div className="grid gap-3 rounded-lg border-2 border-orange-200 bg-orange-50 p-3 shadow-soft">
           <button type="button" className="secondary-button min-h-16 w-full text-lg" onClick={onEdit}>
             <ArrowLeft size={24} aria-hidden="true" />
             증상 다시 선택
@@ -2855,7 +2856,6 @@ function AddressSearchDialog({
 
 function WeatherStrip({ result }: { result: WeatherLoadResult }) {
   const weather = result.data;
-  const sourceLabel = result.source === "api" ? "기상청 API 반영" : "mockData 사용";
 
   return (
     <div>
@@ -2873,12 +2873,9 @@ function WeatherStrip({ result }: { result: WeatherLoadResult }) {
         <div className="rounded-lg border border-line bg-white p-3">
           <Activity className="text-alert" size={20} aria-hidden="true" />
           <p className="mt-2 text-xs font-bold text-stone-500">폭염 위험</p>
-          <p className="font-black">{weather.heatRisk}</p>
+          <p className="font-black">{weatherHeatRiskLabel(weather)}</p>
         </div>
       </div>
-      <p className="mt-2 text-xs font-bold text-stone-500">
-        {sourceLabel} · {weather.updatedAt}
-      </p>
     </div>
   );
 }
