@@ -70,6 +70,15 @@ const symptomOrder = Object.keys(symptomLabels) as SymptomId[];
 type LocationMode = "gps" | "area" | "address";
 type LocationCenter = GeoPoint & { label: string };
 type AddressCandidate = LocationCenter & { id: string; address: string; note?: string };
+type LocationSelectorControlProps = {
+  locationMode: LocationMode;
+  locationDisplay: string;
+  locationNote: string;
+  selectedAddressLabel: string;
+  requestLocation: () => void;
+  useActivityAreaLocation: () => void;
+  useAddressLocation: (address: AddressCandidate) => void;
+};
 
 const symptomVisuals: Record<SymptomId, { shortLabel: string; hint: string; icon: LucideIcon }> = {
   dizziness: { shortLabel: "어지러움", hint: "빙빙 돌거나 휘청거림", icon: Activity },
@@ -774,13 +783,6 @@ function App() {
               setHospitalSubmitted(true);
               setActiveView("hospitalResult");
             }}
-            locationMode={locationMode}
-            locationDisplay={locationDisplay}
-            locationNote={locationNote}
-            selectedAddressLabel={selectedAddress?.label || ""}
-            requestLocation={requestLocation}
-            useActivityAreaLocation={useActivityAreaLocation}
-            useAddressLocation={useAddressLocation}
           />
         ) : (
           <HospitalFinderView
@@ -790,13 +792,6 @@ function App() {
               setHospitalSubmitted(true);
               setActiveView("hospitalResult");
             }}
-            locationMode={locationMode}
-            locationDisplay={locationDisplay}
-            locationNote={locationNote}
-            selectedAddressLabel={selectedAddress?.label || ""}
-            requestLocation={requestLocation}
-            useActivityAreaLocation={useActivityAreaLocation}
-            useAddressLocation={useAddressLocation}
           />
         )
       )}
@@ -807,6 +802,13 @@ function App() {
             hospitals={hospitalRecommendations}
             onEdit={() => setActiveView("hospital")}
             onOpenShelter={openShelterResultsFromSignalCheck}
+            locationMode={locationMode}
+            locationDisplay={locationDisplay}
+            locationNote={locationNote}
+            selectedAddressLabel={selectedAddress?.label || ""}
+            requestLocation={requestLocation}
+            useActivityAreaLocation={useActivityAreaLocation}
+            useAddressLocation={useAddressLocation}
           />
         ) : (
           <HospitalResultView
@@ -815,6 +817,13 @@ function App() {
             weather={weatherResult}
             onEdit={() => setActiveView("hospital")}
             onOpenShelter={openShelterResultsFromSignalCheck}
+            locationMode={locationMode}
+            locationDisplay={locationDisplay}
+            locationNote={locationNote}
+            selectedAddressLabel={selectedAddress?.label || ""}
+            requestLocation={requestLocation}
+            useActivityAreaLocation={useActivityAreaLocation}
+            useAddressLocation={useAddressLocation}
           />
         )
       )}
@@ -1480,24 +1489,10 @@ function HospitalFinderView({
   status,
   setStatus,
   onSubmit,
-  locationMode,
-  locationDisplay,
-  locationNote,
-  selectedAddressLabel,
-  requestLocation,
-  useActivityAreaLocation,
-  useAddressLocation,
 }: {
   status: HospitalSearchStatus;
   setStatus: (status: HospitalSearchStatus) => void;
   onSubmit: () => void;
-  locationMode: LocationMode;
-  locationDisplay: string;
-  locationNote: string;
-  selectedAddressLabel: string;
-  requestLocation: () => void;
-  useActivityAreaLocation: () => void;
-  useAddressLocation: (address: AddressCandidate) => void;
 }) {
   const setSeverity = (symptom: SymptomId, value: number) => {
     setStatus({
@@ -1607,19 +1602,9 @@ function HospitalFinderView({
           )}
         </FieldGroup>
 
-        <LocationSelector
-          mode={locationMode}
-          display={locationDisplay}
-          note={locationNote}
-          selectedAddressLabel={selectedAddressLabel}
-          onUseGps={requestLocation}
-          onUseActivityArea={useActivityAreaLocation}
-          onUseAddress={useAddressLocation}
-        />
-
         <button type="button" className="primary-button mt-5 w-full" onClick={onSubmit}>
           <Check size={18} aria-hidden="true" />
-          정보 제출하고 위험 신호 결과 보기
+          위험 신호 결과 보기
         </button>
       </div>
     </section>
@@ -1630,24 +1615,10 @@ function EasyHospitalFinderView({
   status,
   setStatus,
   onSubmit,
-  locationMode,
-  locationDisplay,
-  locationNote,
-  selectedAddressLabel,
-  requestLocation,
-  useActivityAreaLocation,
-  useAddressLocation,
 }: {
   status: HospitalSearchStatus;
   setStatus: (status: HospitalSearchStatus) => void;
   onSubmit: () => void;
-  locationMode: LocationMode;
-  locationDisplay: string;
-  locationNote: string;
-  selectedAddressLabel: string;
-  requestLocation: () => void;
-  useActivityAreaLocation: () => void;
-  useAddressLocation: (address: AddressCandidate) => void;
 }) {
   const setSeverity = (symptom: SymptomId, value: number) => {
     setStatus({
@@ -1762,16 +1733,6 @@ function EasyHospitalFinderView({
           </div>
         </div>
       )}
-
-      <EasyLocationSelector
-        mode={locationMode}
-        display={locationDisplay}
-        note={locationNote}
-        selectedAddressLabel={selectedAddressLabel}
-        onUseGps={requestLocation}
-        onUseActivityArea={useActivityAreaLocation}
-        onUseAddress={useAddressLocation}
-      />
 
       <button type="button" className="primary-button min-h-20 w-full text-xl" onClick={onSubmit}>
         <Check size={28} aria-hidden="true" />
@@ -1948,14 +1909,28 @@ function HospitalResultView({
   weather,
   onEdit,
   onOpenShelter,
+  locationMode,
+  locationDisplay,
+  locationNote,
+  selectedAddressLabel,
+  requestLocation,
+  useActivityAreaLocation,
+  useAddressLocation,
 }: {
   risk: ReturnType<typeof classifyHospitalRisk>;
   hospitals: ReturnType<typeof recommendHospitals>;
   weather: WeatherLoadResult;
   onEdit: () => void;
   onOpenShelter: () => void;
-}) {
-  const showHospitalRecommendations = risk.level === "danger" || risk.level === "emergency";
+} & LocationSelectorControlProps) {
+  const canSearchHospitals = risk.level === "danger" || risk.level === "emergency";
+  const [hospitalFinderOpen, setHospitalFinderOpen] = useState(false);
+  const [hospitalSearchSubmitted, setHospitalSearchSubmitted] = useState(false);
+  const showHospitalRecommendations = canSearchHospitals && hospitalSearchSubmitted;
+  const openHospitalFinder = () => {
+    setHospitalFinderOpen(true);
+    setHospitalSearchSubmitted(false);
+  };
 
   return (
     <section className="space-y-4">
@@ -1982,17 +1957,17 @@ function HospitalResultView({
           </button>
         )}
         {risk.level === "danger" && (
-          <a href="#hospital-recommendations" className="secondary-button w-full">
+          <button type="button" className="secondary-button w-full" onClick={openHospitalFinder}>
             <Hospital size={18} aria-hidden="true" />
             병원 찾기
-          </a>
+          </button>
         )}
         {risk.level === "emergency" && (
           <>
-            <a href="#hospital-recommendations" className="primary-button w-full">
+            <button type="button" className="primary-button w-full" onClick={openHospitalFinder}>
               <Hospital size={18} aria-hidden="true" />
               병원 찾기
-            </a>
+            </button>
             <a href="tel:119" className="danger-button w-full">
               <Siren size={18} aria-hidden="true" />
               119 전화
@@ -2001,10 +1976,34 @@ function HospitalResultView({
         )}
       </div>
 
+      {canSearchHospitals && hospitalFinderOpen && (
+        <div id="hospital-location-search" className="space-y-3 scroll-mt-4">
+          <div className="surface">
+            <h3 className="text-lg font-black">병원 찾기에 사용할 위치</h3>
+            <p className="mt-2 text-sm leading-6 text-stone-700">
+              주소를 검색하거나 현재 위치, 활동 지역 기준을 선택한 뒤 병원 찾기를 누르세요.
+            </p>
+          </div>
+          <LocationSelector
+            mode={locationMode}
+            display={locationDisplay}
+            note={locationNote}
+            selectedAddressLabel={selectedAddressLabel}
+            onUseGps={requestLocation}
+            onUseActivityArea={useActivityAreaLocation}
+            onUseAddress={useAddressLocation}
+          />
+          <button type="button" className="primary-button w-full" onClick={() => setHospitalSearchSubmitted(true)}>
+            <Hospital size={18} aria-hidden="true" />
+            병원 찾기
+          </button>
+        </div>
+      )}
+
       {showHospitalRecommendations && (
         <div id="hospital-recommendations" className="space-y-3 scroll-mt-4">
           <div className="surface">
-            <h3 className="text-lg font-black">증상과 가까운 의료기관 3곳</h3>
+            <h3 className="text-lg font-black">증상과 선택 위치 기준 의료기관 3곳</h3>
             <p className="mt-2 text-sm leading-6 text-stone-700">
               선택한 위치와 증상 정보를 기준으로 가까운 후보를 정렬했습니다. 방문 전 전화 상담을 권장합니다.
             </p>
@@ -2117,15 +2116,29 @@ function EasyHospitalResultView({
   hospitals,
   onEdit,
   onOpenShelter,
+  locationMode,
+  locationDisplay,
+  locationNote,
+  selectedAddressLabel,
+  requestLocation,
+  useActivityAreaLocation,
+  useAddressLocation,
 }: {
   risk: ReturnType<typeof classifyHospitalRisk>;
   hospitals: ReturnType<typeof recommendHospitals>;
   onEdit: () => void;
   onOpenShelter: () => void;
-}) {
+} & LocationSelectorControlProps) {
   const first = hospitals[0];
   const RiskIcon = risk.level === "emergency" ? Siren : risk.level === "danger" || risk.level === "caution" ? AlertTriangle : ShieldCheck;
-  const showHospitalRecommendations = risk.level === "danger" || risk.level === "emergency";
+  const canSearchHospitals = risk.level === "danger" || risk.level === "emergency";
+  const [hospitalFinderOpen, setHospitalFinderOpen] = useState(false);
+  const [hospitalSearchSubmitted, setHospitalSearchSubmitted] = useState(false);
+  const showHospitalRecommendations = canSearchHospitals && hospitalSearchSubmitted;
+  const openHospitalFinder = () => {
+    setHospitalFinderOpen(true);
+    setHospitalSearchSubmitted(false);
+  };
 
   return (
     <section className="space-y-4">
@@ -2166,17 +2179,17 @@ function EasyHospitalResultView({
           </button>
         )}
         {risk.level === "danger" && (
-          <a href="#easy-hospital-recommendations" className="secondary-button min-h-16 w-full text-lg">
+          <button type="button" className="secondary-button min-h-16 w-full text-lg" onClick={openHospitalFinder}>
             <Hospital size={24} aria-hidden="true" />
             병원 찾기
-          </a>
+          </button>
         )}
         {risk.level === "emergency" && (
           <>
-            <a href="#easy-hospital-recommendations" className="primary-button min-h-16 w-full text-lg">
+            <button type="button" className="primary-button min-h-16 w-full text-lg" onClick={openHospitalFinder}>
               <Hospital size={24} aria-hidden="true" />
               병원 찾기
-            </a>
+            </button>
             <a href="tel:119" className="danger-button min-h-16 w-full text-lg">
               <Siren size={24} aria-hidden="true" />
               119 전화
@@ -2184,6 +2197,30 @@ function EasyHospitalResultView({
           </>
         )}
       </div>
+
+      {canSearchHospitals && hospitalFinderOpen && (
+        <div id="easy-hospital-location-search" className="space-y-3 scroll-mt-4">
+          <div className="surface">
+            <h3 className="text-2xl font-black">병원 찾기에 사용할 위치</h3>
+            <p className="mt-2 text-lg font-bold leading-8 text-stone-700">
+              주소를 검색하거나 현재 위치, 활동 지역 기준을 고른 뒤 병원 찾기를 눌러주세요.
+            </p>
+          </div>
+          <EasyLocationSelector
+            mode={locationMode}
+            display={locationDisplay}
+            note={locationNote}
+            selectedAddressLabel={selectedAddressLabel}
+            onUseGps={requestLocation}
+            onUseActivityArea={useActivityAreaLocation}
+            onUseAddress={useAddressLocation}
+          />
+          <button type="button" className="primary-button min-h-16 w-full text-lg" onClick={() => setHospitalSearchSubmitted(true)}>
+            <Hospital size={24} aria-hidden="true" />
+            병원 찾기
+          </button>
+        </div>
+      )}
 
       {showHospitalRecommendations && first ? (
         <article id="easy-hospital-recommendations" className="scroll-mt-4 rounded-lg border-2 border-river bg-white p-5 shadow-soft">
