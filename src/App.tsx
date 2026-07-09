@@ -1012,7 +1012,7 @@ function AccountView({
           <div>
             <h2 className="text-xl font-black">기본 정보 입력</h2>
             <p className="mt-2 text-sm leading-6 text-stone-700">
-              추천에 필요한 정보만 입력해 주세요.
+              쉼터와 의료기관 안내에 사용할 기본 정보를 입력해 주세요.
             </p>
           </div>
         </div>
