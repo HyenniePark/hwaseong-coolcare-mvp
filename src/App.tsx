@@ -1891,9 +1891,13 @@ function ShelterResultView({
 }) {
   return (
     <section className="space-y-4">
-      <ResultHeader title="쉼터 추천 결과" onEdit={onEdit} />
+      <ResultHeader title="쉼터 추천 결과" onEdit={onEdit} showEdit={false} />
       <WeatherStrip result={weather} />
       <RiskPanel risk={risk} showSignals={false} />
+      <button type="button" className="secondary-button w-full" onClick={onEdit}>
+        <ArrowLeft size={18} aria-hidden="true" />
+        제출 정보 수정
+      </button>
       <div className="space-y-3">
         {recommendations.map((recommendation, index) => (
           <ShelterCard key={recommendation.shelter.id} recommendation={recommendation} rank={index + 1} />
@@ -1935,9 +1939,13 @@ function HospitalResultView({
   if (showHospitalRecommendations) {
     return (
       <section className="space-y-4">
-        <ResultHeader title="병원 추천 결과" onEdit={onEdit} />
+        <ResultHeader title="병원 추천 결과" onEdit={onEdit} showEdit={false} />
         <WeatherStrip result={weather} />
         <RiskPanel risk={risk} showSignals={false} />
+        <button type="button" className="secondary-button w-full" onClick={onEdit}>
+          <ArrowLeft size={18} aria-hidden="true" />
+          증상 다시 선택
+        </button>
         <button
           type="button"
           className="secondary-button w-full"
@@ -2063,11 +2071,6 @@ function EasyShelterResultView({
 
   return (
     <section className="space-y-4">
-      <button type="button" className="secondary-button min-h-16 w-full text-lg" onClick={onEdit}>
-        <ArrowLeft size={24} aria-hidden="true" />
-        다시 입력하기
-      </button>
-
       <div className={clsx("surface", risk.level === "emergency" && "border-rose-300 bg-rose-50", risk.level === "danger" && "border-orange-300 bg-orange-50")}>
         <div className="flex items-center gap-4">
           <div className={clsx("rounded-lg p-4", risk.level === "emergency" ? "bg-rose-100 text-alert" : risk.level === "danger" ? "bg-orange-100 text-heat" : "bg-orange-50 text-cool")}>
@@ -2087,6 +2090,11 @@ function EasyShelterResultView({
           119 전화
         </a>
       )}
+
+      <button type="button" className="secondary-button min-h-16 w-full text-lg" onClick={onEdit}>
+        <ArrowLeft size={24} aria-hidden="true" />
+        제출 정보 수정
+      </button>
 
       {first ? (
         <article className="rounded-lg border-2 border-cool bg-white p-5 shadow-soft">
@@ -2169,11 +2177,6 @@ function EasyHospitalResultView({
   if (showHospitalRecommendations) {
     return (
       <section className="space-y-4">
-        <button type="button" className="secondary-button min-h-16 w-full text-lg" onClick={onEdit}>
-          <ArrowLeft size={24} aria-hidden="true" />
-          다시 입력하기
-        </button>
-
         <div className="surface border-2 border-river">
           <p className="text-lg font-black text-river">병원 추천 결과</p>
           <h2 className="mt-2 text-3xl font-black leading-10">가까운 의료기관</h2>
@@ -2181,6 +2184,11 @@ function EasyHospitalResultView({
             선택한 위치와 증상 정보를 기준으로 가까운 후보를 정렬했습니다. 방문 전 전화 상담을 권장합니다.
           </p>
         </div>
+
+        <button type="button" className="secondary-button min-h-16 w-full text-lg" onClick={onEdit}>
+          <ArrowLeft size={24} aria-hidden="true" />
+          증상 다시 선택
+        </button>
 
         <button
           type="button"
@@ -2330,13 +2338,15 @@ function EasyHospitalResultView({
   );
 }
 
-function ResultHeader({ title, onEdit }: { title: string; onEdit: () => void }) {
+function ResultHeader({ title, onEdit, showEdit = true }: { title: string; onEdit: () => void; showEdit?: boolean }) {
   return (
     <div className="surface">
-      <button type="button" className="secondary-button mb-3" onClick={onEdit}>
-        <ArrowLeft size={18} aria-hidden="true" />
-        제출 정보 수정
-      </button>
+      {showEdit && (
+        <button type="button" className="secondary-button mb-3" onClick={onEdit}>
+          <ArrowLeft size={18} aria-hidden="true" />
+          제출 정보 수정
+        </button>
+      )}
       <h2 className="text-xl font-black">{title}</h2>
       <p className="mt-2 text-sm leading-6 text-stone-700">
         제출한 정보를 기준으로 추천을 계산했습니다.
