@@ -52,7 +52,6 @@ import { fetchSheltersWithFallback, getHospitalsWithFallback, getSheltersWithFal
 import { geocodeAddress, reverseGeocodePoint } from "./services/kakaoMapService";
 import { fetchWeatherWithFallback, type WeatherLoadResult } from "./services/weatherService";
 import type {
-  ActivityStatus,
   CurrentStatus,
   GeoPoint,
   HospitalSearchStatus,
@@ -66,7 +65,6 @@ import type {
   ViewId,
 } from "./types";
 
-const durationMaxStep = 20;
 const symptomOrder = Object.keys(symptomLabels) as SymptomId[];
 type LocationMode = "gps" | "area" | "address";
 type LocationCenter = GeoPoint & { label: string };
@@ -336,8 +334,6 @@ const initialProfile: UserProfile = {
 };
 
 const initialShelterStatus: ShelterSearchStatus = {
-  activityStatus: "indoor",
-  outdoorMinutes: 0,
   hasEmergencySignal: false,
 };
 
@@ -367,41 +363,8 @@ function toggleValue<T extends string>(values: T[], value: T) {
     : [...values, value];
 }
 
-function durationStepFromMinutes(minutes: number) {
-  return Math.min(durationMaxStep, Math.max(0, Math.ceil(minutes / 30)));
-}
-
-function durationMinutesFromStep(step: number) {
-  return Math.min(durationMaxStep, Math.max(0, step)) * 30;
-}
-
-function durationLabel(minutes: number) {
-  if (minutes >= 600) {
-    return "10시간 이상";
-  }
-
-  if (minutes === 0) {
-    return "0분";
-  }
-
-  const hours = Math.floor(minutes / 60);
-  const remain = minutes % 60;
-
-  if (hours === 0) {
-    return remain + "분";
-  }
-
-  if (remain === 0) {
-    return hours + "시간";
-  }
-
-  return hours + "시간 " + remain + "분";
-}
-
 function shelterToCurrentStatus(status: ShelterSearchStatus): CurrentStatus {
   return {
-    activityStatus: status.activityStatus,
-    outdoorMinutes: status.outdoorMinutes,
     symptoms: status.hasEmergencySignal ? ["confusion"] : [],
   };
 }
@@ -410,8 +373,6 @@ function hospitalToCurrentStatus(status: HospitalSearchStatus): CurrentStatus {
   const symptoms = selectedSymptomsFromSeverity(status.severities);
 
   return {
-    activityStatus: "indoor",
-    outdoorMinutes: 0,
     symptoms: status.emergencyFromShelter && symptoms.length === 0 ? ["confusion"] : symptoms,
   };
 }
@@ -1247,16 +1208,8 @@ function ShelterFinderView({
   useActivityAreaLocation: () => void;
   useAddressLocation: (address: AddressCandidate) => void;
 }) {
-  const durationStep = durationStepFromMinutes(status.outdoorMinutes);
   const setField = <K extends keyof ShelterSearchStatus>(key: K, value: ShelterSearchStatus[K]) => {
     setStatus({ ...status, [key]: value });
-  };
-  const setActivityStatus = (value: ActivityStatus) => {
-    setStatus({
-      ...status,
-      activityStatus: value,
-      outdoorMinutes: value === "outdoor" ? status.outdoorMinutes || 30 : 0,
-    });
   };
 
   return (
@@ -1273,56 +1226,6 @@ function ShelterFinderView({
             </p>
           </div>
         </div>
-
-        <FieldGroup label="지금 어디에 있나요?">
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              ["indoor", "실내"],
-              ["outdoor", "실외"],
-              ["planned", "외출 예정"],
-            ].map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                className={clsx(
-                  "option-button text-center",
-                  status.activityStatus === value && "option-button-selected",
-                )}
-                onClick={() => setActivityStatus(value as ActivityStatus)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </FieldGroup>
-
-        {status.activityStatus === "outdoor" && (
-          <FieldGroup label="바깥 활동 시간">
-            <div className="control-panel">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-lg font-black">{durationLabel(status.outdoorMinutes)}</span>
-                <span className="text-sm text-stone-600">30분 단위</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max={durationMaxStep}
-                step="1"
-                value={durationStep}
-                onChange={(event) =>
-                  setField("outdoorMinutes", durationMinutesFromStep(Number(event.target.value)))
-                }
-                className="mt-4 w-full accent-cool"
-                aria-label="바깥 활동 시간"
-              />
-              <div className="mt-2 flex items-center justify-between text-xs font-bold text-stone-500">
-                <span>0분</span>
-                <span>5시간</span>
-                <span>10시간 이상</span>
-              </div>
-            </div>
-          </FieldGroup>
-        )}
 
         <LocationSelector
           mode={locationMode}
@@ -1385,13 +1288,6 @@ function EasyShelterFinderView({
   const setField = <K extends keyof ShelterSearchStatus>(key: K, value: ShelterSearchStatus[K]) => {
     setStatus({ ...status, [key]: value });
   };
-  const setActivityStatus = (value: ActivityStatus) => {
-    setStatus({
-      ...status,
-      activityStatus: value,
-      outdoorMinutes: value === "outdoor" ? status.outdoorMinutes || 30 : 0,
-    });
-  };
 
   return (
     <section className="space-y-4">
@@ -1409,40 +1305,6 @@ function EasyShelterFinderView({
           지금 계신 곳에 맞춰 가까운 무더위쉼터를 찾습니다.
         </p>
       </div>
-
-      <div className="surface">
-        <h3 className="text-2xl font-black">지금 어디에 있나요?</h3>
-        <div className="mt-4 grid gap-3">
-          <EasyChoiceCard
-            selected={status.activityStatus === "indoor"}
-            icon={Home}
-            title="실내"
-            description="건물 안에 있어요"
-            onClick={() => setActivityStatus("indoor")}
-          />
-          <EasyChoiceCard
-            selected={status.activityStatus === "outdoor"}
-            icon={ThermometerSun}
-            title="실외"
-            description="밖에 있어요"
-            onClick={() => setActivityStatus("outdoor")}
-          />
-          <EasyChoiceCard
-            selected={status.activityStatus === "planned"}
-            icon={Navigation}
-            title="외출 예정"
-            description="곧 밖으로 나갈 예정이에요"
-            onClick={() => setActivityStatus("planned")}
-          />
-        </div>
-      </div>
-
-      {status.activityStatus === "outdoor" && (
-        <EasyDurationPicker
-          minutes={status.outdoorMinutes}
-          onChange={(minutes) => setField("outdoorMinutes", minutes)}
-        />
-      )}
 
       <EasyLocationSelector
         mode={locationMode}
@@ -2514,62 +2376,6 @@ function EasyChoiceCard({
       </span>
       {selected && <Check size={26} aria-hidden="true" />}
     </button>
-  );
-}
-
-function EasyDurationPicker({
-  minutes,
-  onChange,
-}: {
-  minutes: number;
-  onChange: (minutes: number) => void;
-}) {
-  const durationStep = durationStepFromMinutes(minutes);
-  const changeBy = (delta: number) => {
-    onChange(durationMinutesFromStep(durationStep + delta));
-  };
-
-  return (
-    <div className="surface">
-      <h3 className="text-2xl font-black">밖에 얼마나 있었나요?</h3>
-      <div className="mt-4 rounded-lg bg-orange-50 p-4 text-center">
-        <p className="text-4xl font-black leading-none text-cool">{durationLabel(minutes)}</p>
-        <p className="mt-2 text-lg font-bold text-stone-700">30분 단위로 선택합니다</p>
-      </div>
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          className="secondary-button min-h-16 text-lg"
-          disabled={durationStep <= 0}
-          onClick={() => changeBy(-1)}
-        >
-          - 30분
-        </button>
-        <button
-          type="button"
-          className="secondary-button min-h-16 text-lg"
-          disabled={durationStep >= durationMaxStep}
-          onClick={() => changeBy(1)}
-        >
-          + 30분
-        </button>
-      </div>
-      <input
-        type="range"
-        min="0"
-        max={durationMaxStep}
-        step="1"
-        value={durationStep}
-        onChange={(event) => onChange(durationMinutesFromStep(Number(event.target.value)))}
-        className="mt-5 w-full accent-cool"
-        aria-label="바깥 활동 시간"
-      />
-      <div className="mt-2 flex items-center justify-between text-sm font-black text-stone-500">
-        <span>0분</span>
-        <span>5시간</span>
-        <span>10시간 이상</span>
-      </div>
-    </div>
   );
 }
 

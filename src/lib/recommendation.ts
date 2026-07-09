@@ -238,17 +238,6 @@ export function classifyRisk(profile: UserProfile, status: CurrentStatus, weathe
     signals.push("야외활동 많음");
   }
 
-  if (status.activityStatus === "outdoor" || status.activityStatus === "planned") {
-    if (status.outdoorMinutes >= 300) {
-      score += 3;
-    } else if (status.outdoorMinutes >= 60) {
-      score += 2;
-    } else if (status.outdoorMinutes > 0) {
-      score += 1;
-    }
-    signals.push("외부활동 노출");
-  }
-
   if (score >= 4) {
     return {
       level: "caution",

@@ -4,8 +4,6 @@ export type TransportMode = "walk" | "bus" | "car" | "caregiver";
 
 export type SpecialTrait = "outdoorWorker" | "limitedMobility";
 
-export type ActivityStatus = "indoor" | "outdoor" | "planned";
-
 export type RiskLevel = "normal" | "caution" | "danger" | "emergency";
 
 export type SymptomId =
@@ -36,14 +34,10 @@ export interface UserProfile {
 }
 
 export interface CurrentStatus {
-  activityStatus: ActivityStatus;
-  outdoorMinutes: number;
   symptoms: SymptomId[];
 }
 
 export interface ShelterSearchStatus {
-  activityStatus: ActivityStatus;
-  outdoorMinutes: number;
   hasEmergencySignal: boolean;
 }
 
