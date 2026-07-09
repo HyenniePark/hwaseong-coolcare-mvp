@@ -237,7 +237,7 @@ async function addressCandidateFromPostcode(data: DaumPostcodeData): Promise<Add
       address,
       lat: geocoded.lat,
       lng: geocoded.lng,
-      note: "선택 주소의 실제 좌표로 추천을 계산합니다.",
+      note: "선택한 주소를 기준으로 추천합니다.",
     };
   }
 
@@ -247,7 +247,7 @@ async function addressCandidateFromPostcode(data: DaumPostcodeData): Promise<Add
     address,
     lat: center.lat,
     lng: center.lng,
-    note: "주소 좌표 변환을 사용할 수 없어 행정구역 중심으로 추천을 계산합니다.",
+    note: "주소 위치를 확인하지 못해 행정구역 기준으로 추천합니다.",
   };
 }
 
@@ -534,13 +534,13 @@ function App() {
     if (center) {
       setLocation({ lat: center.lat, lng: center.lng });
       setLocationDisplay(center.label);
-      setLocationNote(reason + " 활동 지역 중심으로 추천을 계산합니다.");
+      setLocationNote(reason + " 활동 지역을 기준으로 추천합니다.");
       return;
     }
 
     setLocation({ lat: defaultLocation.lat, lng: defaultLocation.lng });
     setLocationDisplay(defaultLocation.label);
-    setLocationNote(reason + " 활동 지역 정보가 없어 임시 기준으로 추천을 계산합니다.");
+    setLocationNote(reason + " 활동 지역을 입력하면 더 가까운 추천을 볼 수 있습니다.");
   };
 
   const requestLocation = () => {
@@ -674,11 +674,12 @@ function App() {
               </button>
             )}
             <div>
-              <h1 className="text-3xl font-black text-ink">화성 쿨케어</h1>
+              <p className="text-sm font-bold text-cool">Hwaseong CoolCare</p>
+              <h1 className="mt-1 text-3xl font-black text-ink">화성 쿨케어</h1>
               <p className="mt-2 text-sm leading-6 text-stone-700">
                 {profile.easyMode
-                  ? "큰글씨와 큰 아이콘으로 지금 필요한 행동을 먼저 보여줍니다."
-                  : "왼쪽 메뉴에서 필요한 화면을 열어 추천을 확인합니다."}
+                  ? "지금 필요한 행동을 큰 글씨로 보여드립니다."
+                  : "더위 상황에 맞춰 쉼터와 의료기관을 안내합니다."}
               </p>
             </div>
           </div>
@@ -1009,9 +1010,9 @@ function AccountView({
             <UserPlus size={28} aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-xl font-black">계정 정보 입력</h2>
+            <h2 className="text-xl font-black">기본 정보 입력</h2>
             <p className="mt-2 text-sm leading-6 text-stone-700">
-              실제 회원가입은 아니며, 추천에 필요한 기본 정보를 이 화면 안에서만 사용합니다.
+              추천에 필요한 정보만 입력해 주세요.
             </p>
           </div>
         </div>
@@ -1124,7 +1125,7 @@ function AccountView({
         <div className="mt-5 grid gap-2">
           <button type="button" className="primary-button w-full" onClick={submitAccount}>
             <Check size={18} aria-hidden="true" />
-            정보 반영하기
+            이 정보로 시작하기
           </button>
           {formError && <p className="text-sm font-bold text-alert">{formError}</p>}
         </div>
@@ -1822,9 +1823,9 @@ function HospitalResultView({
         </div>
         <div className="space-y-3">
           <div className="surface">
-            <h3 className="text-lg font-black">증상과 선택 위치 기준 의료기관 3곳</h3>
+            <h3 className="text-lg font-black">추천 의료기관 3곳</h3>
             <p className="mt-2 text-sm leading-6 text-stone-700">
-              선택한 위치와 증상 정보를 기준으로 가까운 후보를 정렬했습니다. 방문 전 전화 상담을 권장합니다.
+              가까운 의료기관을 먼저 보여드립니다. 방문 전 전화로 확인해 주세요.
             </p>
           </div>
           {hospitals.length > 0 ? (
@@ -2044,7 +2045,7 @@ function EasyHospitalResultView({
           <p className="text-lg font-black text-river">병원 추천 결과</p>
           <h2 className="mt-2 text-3xl font-black leading-10">가까운 의료기관</h2>
           <p className="mt-4 text-xl font-bold leading-9 text-stone-700">
-            선택한 위치와 증상 정보를 기준으로 가까운 후보를 정렬했습니다. 방문 전 전화 상담을 권장합니다.
+            가까운 의료기관을 먼저 보여드립니다. 방문 전 전화로 확인해 주세요.
           </p>
         </div>
 
@@ -2213,7 +2214,7 @@ function ResultHeader({ title, onEdit, showEdit = true }: { title: string; onEdi
       )}
       <h2 className="text-xl font-black">{title}</h2>
       <p className="mt-2 text-sm leading-6 text-stone-700">
-        제출한 정보를 기준으로 추천을 계산했습니다.
+        입력한 정보로 추천을 정리했습니다.
       </p>
     </div>
   );
@@ -2420,7 +2421,7 @@ function EasyLocationSelector({
           selected={mode === "area"}
           icon={MapPin}
           title="활동 지역 중심"
-          description="계정 정보의 지역 기준"
+          description="내 활동 지역 기준"
           onClick={onUseActivityArea}
         />
         <EasyChoiceCard
@@ -2490,14 +2491,14 @@ function LocationSelector({
             selected={mode === "gps"}
             icon={LocateFixed}
             title="GPS 현재 위치"
-            description="브라우저 위치 권한으로 계산"
+            description="현재 위치로 찾기"
             onClick={onUseGps}
           />
           <LocationModeButton
             selected={mode === "area"}
             icon={MapPin}
             title="활동 지역 중심"
-            description="계정 정보의 구/행정구 기준"
+            description="내 활동 지역 기준"
             onClick={onUseActivityArea}
           />
           <LocationModeButton
