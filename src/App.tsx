@@ -1350,7 +1350,7 @@ function ShelterFinderView({
 
         <button type="button" className="primary-button mt-5 w-full" onClick={onSubmit}>
           <Check size={18} aria-hidden="true" />
-          정보 제출하고 쉼터 추천 보기
+          쉼터 추천 보기
         </button>
       </div>
 
@@ -1932,6 +1932,42 @@ function HospitalResultView({
     setHospitalSearchSubmitted(false);
   };
 
+  if (showHospitalRecommendations) {
+    return (
+      <section className="space-y-4">
+        <ResultHeader title="병원 추천 결과" onEdit={onEdit} />
+        <WeatherStrip result={weather} />
+        <RiskPanel risk={risk} showSignals={false} />
+        <button
+          type="button"
+          className="secondary-button w-full"
+          onClick={() => {
+            setHospitalFinderOpen(true);
+            setHospitalSearchSubmitted(false);
+          }}
+        >
+          <MapPin size={18} aria-hidden="true" />
+          위치 다시 선택
+        </button>
+        <div className="space-y-3">
+          <div className="surface">
+            <h3 className="text-lg font-black">증상과 선택 위치 기준 의료기관 3곳</h3>
+            <p className="mt-2 text-sm leading-6 text-stone-700">
+              선택한 위치와 증상 정보를 기준으로 가까운 후보를 정렬했습니다. 방문 전 전화 상담을 권장합니다.
+            </p>
+          </div>
+          {hospitals.length > 0 ? (
+            hospitals.map((item) => (
+              <HospitalCard key={item.hospital.id} item={item} />
+            ))
+          ) : (
+            <EmptyResult icon={Hospital} title="추천 병원 없음" body="표시할 의료기관 데이터가 없습니다." />
+          )}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-4">
       <ResultHeader title="위험 신호 체크 결과" onEdit={onEdit} />
@@ -2003,26 +2039,8 @@ function HospitalResultView({
           />
           <button type="button" className="primary-button w-full" onClick={() => setHospitalSearchSubmitted(true)}>
             <Hospital size={18} aria-hidden="true" />
-            병원 찾기
+            병원 추천 보기
           </button>
-        </div>
-      )}
-
-      {showHospitalRecommendations && (
-        <div id="hospital-recommendations" className="space-y-3 scroll-mt-4">
-          <div className="surface">
-            <h3 className="text-lg font-black">증상과 선택 위치 기준 의료기관 3곳</h3>
-            <p className="mt-2 text-sm leading-6 text-stone-700">
-              선택한 위치와 증상 정보를 기준으로 가까운 후보를 정렬했습니다. 방문 전 전화 상담을 권장합니다.
-            </p>
-          </div>
-          {hospitals.length > 0 ? (
-            hospitals.map((item) => (
-              <HospitalCard key={item.hospital.id} item={item} />
-            ))
-          ) : (
-            <EmptyResult icon={Hospital} title="추천 병원 없음" body="표시할 의료기관 데이터가 없습니다." />
-          )}
         </div>
       )}
     </section>
@@ -2148,6 +2166,77 @@ function EasyHospitalResultView({
     setHospitalSearchSubmitted(false);
   };
 
+  if (showHospitalRecommendations) {
+    return (
+      <section className="space-y-4">
+        <button type="button" className="secondary-button min-h-16 w-full text-lg" onClick={onEdit}>
+          <ArrowLeft size={24} aria-hidden="true" />
+          다시 입력하기
+        </button>
+
+        <div className="surface border-2 border-river">
+          <p className="text-lg font-black text-river">병원 추천 결과</p>
+          <h2 className="mt-2 text-3xl font-black leading-10">가까운 의료기관</h2>
+          <p className="mt-4 text-xl font-bold leading-9 text-stone-700">
+            선택한 위치와 증상 정보를 기준으로 가까운 후보를 정렬했습니다. 방문 전 전화 상담을 권장합니다.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="secondary-button min-h-16 w-full text-lg"
+          onClick={() => {
+            setHospitalFinderOpen(true);
+            setHospitalSearchSubmitted(false);
+          }}
+        >
+          <MapPin size={24} aria-hidden="true" />
+          위치 다시 선택
+        </button>
+
+        {first ? (
+          <article id="easy-hospital-recommendations" className="scroll-mt-4 rounded-lg border-2 border-river bg-white p-5 shadow-soft">
+            <div className="flex items-start gap-4">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-river">
+                <Hospital size={38} aria-hidden="true" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-lg font-black text-river">먼저 전화할 곳</p>
+                <h3 className="mt-2 text-3xl font-black leading-10">{first.hospital.name}</h3>
+                <p className="mt-3 text-xl font-bold leading-8 text-stone-700">{formatDistance(first.distanceKm)} · {first.hospital.phone}</p>
+              </div>
+            </div>
+            <p className="mt-4 rounded-lg bg-paper p-3 text-lg font-bold leading-8 text-stone-700">{first.hospital.departments}</p>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <a href={"tel:" + first.hospital.phone} className="secondary-button min-h-16 text-lg">
+                <Phone size={24} aria-hidden="true" />
+                전화
+              </a>
+              <a href={kakaoSearchUrl(first.hospital.name)} target="_blank" rel="noreferrer" className="primary-button min-h-16 text-lg">
+                <Navigation size={24} aria-hidden="true" />
+                길찾기
+              </a>
+            </div>
+          </article>
+        ) : (
+          <EmptyResult icon={Hospital} title="추천 병원 없음" body="표시할 의료기관 데이터가 없습니다." />
+        )}
+
+        {hospitals.length > 1 && (
+          <div className="space-y-2">
+            <h3 className="text-xl font-black">다른 병원</h3>
+            {hospitals.slice(1).map((item) => (
+              <article key={item.hospital.id} className="rounded-lg border border-line bg-white p-4">
+                <h4 className="text-xl font-black leading-7">{item.hospital.name}</h4>
+                <p className="mt-2 text-lg font-bold text-stone-600">{formatDistance(item.distanceKm)} · {item.hospital.phone}</p>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-4">
       <button type="button" className="secondary-button min-h-16 w-full text-lg" onClick={onEdit}>
@@ -2233,48 +2322,8 @@ function EasyHospitalResultView({
           />
           <button type="button" className="primary-button min-h-16 w-full text-lg" onClick={() => setHospitalSearchSubmitted(true)}>
             <Hospital size={24} aria-hidden="true" />
-            병원 찾기
+            병원 추천 보기
           </button>
-        </div>
-      )}
-
-      {showHospitalRecommendations && first ? (
-        <article id="easy-hospital-recommendations" className="scroll-mt-4 rounded-lg border-2 border-river bg-white p-5 shadow-soft">
-          <div className="flex items-start gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-river">
-              <Hospital size={38} aria-hidden="true" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-lg font-black text-river">먼저 전화할 곳</p>
-              <h3 className="mt-2 text-3xl font-black leading-10">{first.hospital.name}</h3>
-              <p className="mt-3 text-xl font-bold leading-8 text-stone-700">{formatDistance(first.distanceKm)} · {first.hospital.phone}</p>
-            </div>
-          </div>
-          <p className="mt-4 rounded-lg bg-paper p-3 text-lg font-bold leading-8 text-stone-700">{first.hospital.departments}</p>
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <a href={"tel:" + first.hospital.phone} className="secondary-button min-h-16 text-lg">
-              <Phone size={24} aria-hidden="true" />
-              전화
-            </a>
-            <a href={kakaoSearchUrl(first.hospital.name)} target="_blank" rel="noreferrer" className="primary-button min-h-16 text-lg">
-              <Navigation size={24} aria-hidden="true" />
-              길찾기
-            </a>
-          </div>
-        </article>
-      ) : showHospitalRecommendations ? (
-        <EmptyResult icon={Hospital} title="추천 병원 없음" body="표시할 의료기관 데이터가 없습니다." />
-      ) : null}
-
-      {showHospitalRecommendations && hospitals.length > 1 && (
-        <div className="space-y-2">
-          <h3 className="text-xl font-black">다른 병원</h3>
-          {hospitals.slice(1).map((item) => (
-            <article key={item.hospital.id} className="rounded-lg border border-line bg-white p-4">
-              <h4 className="text-xl font-black leading-7">{item.hospital.name}</h4>
-              <p className="mt-2 text-lg font-bold text-stone-600">{formatDistance(item.distanceKm)} · {item.hospital.phone}</p>
-            </article>
-          ))}
         </div>
       )}
     </section>
