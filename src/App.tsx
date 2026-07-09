@@ -1951,20 +1951,28 @@ function HospitalResultView({
 
       <div className={clsx("grid gap-2", risk.level === "danger" && "sm:grid-cols-2")}>
         {(risk.level === "normal" || risk.level === "caution" || risk.level === "danger") && (
-          <button type="button" className="primary-button w-full" onClick={onOpenShelter}>
+          <button type="button" className="secondary-button w-full" onClick={onOpenShelter}>
             <Home size={18} aria-hidden="true" />
             가까운 쉼터 보기
           </button>
         )}
         {risk.level === "danger" && (
-          <button type="button" className="secondary-button w-full" onClick={openHospitalFinder}>
+          <button
+            type="button"
+            className={clsx(hospitalFinderOpen ? "primary-button" : "secondary-button", "w-full")}
+            onClick={openHospitalFinder}
+          >
             <Hospital size={18} aria-hidden="true" />
             병원 찾기
           </button>
         )}
         {risk.level === "emergency" && (
           <>
-            <button type="button" className="primary-button w-full" onClick={openHospitalFinder}>
+            <button
+              type="button"
+              className={clsx(hospitalFinderOpen ? "primary-button" : "secondary-button", "w-full")}
+              onClick={openHospitalFinder}
+            >
               <Hospital size={18} aria-hidden="true" />
               병원 찾기
             </button>
@@ -2173,20 +2181,28 @@ function EasyHospitalResultView({
 
       <div className="grid gap-3">
         {(risk.level === "normal" || risk.level === "caution" || risk.level === "danger") && (
-          <button type="button" className="primary-button min-h-16 w-full text-lg" onClick={onOpenShelter}>
+          <button type="button" className="secondary-button min-h-16 w-full text-lg" onClick={onOpenShelter}>
             <Home size={24} aria-hidden="true" />
             가까운 쉼터 보기
           </button>
         )}
         {risk.level === "danger" && (
-          <button type="button" className="secondary-button min-h-16 w-full text-lg" onClick={openHospitalFinder}>
+          <button
+            type="button"
+            className={clsx(hospitalFinderOpen ? "primary-button" : "secondary-button", "min-h-16 w-full text-lg")}
+            onClick={openHospitalFinder}
+          >
             <Hospital size={24} aria-hidden="true" />
             병원 찾기
           </button>
         )}
         {risk.level === "emergency" && (
           <>
-            <button type="button" className="primary-button min-h-16 w-full text-lg" onClick={openHospitalFinder}>
+            <button
+              type="button"
+              className={clsx(hospitalFinderOpen ? "primary-button" : "secondary-button", "min-h-16 w-full text-lg")}
+              onClick={openHospitalFinder}
+            >
               <Hospital size={24} aria-hidden="true" />
               병원 찾기
             </button>
