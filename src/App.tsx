@@ -191,16 +191,6 @@ function gpsLocationDisplay(point: GeoPoint) {
   return nearest ? "화성시 " + nearest.areaName + " 인근" : "GPS 현재 위치";
 }
 
-const mockAddressCandidates: AddressCandidate[] = [
-  { id: "cityhall", label: "화성시청", address: "경기도 화성시 남양읍 시청로 159", lat: 37.1996, lng: 126.8312 },
-  { id: "namyang", label: "남양읍 행정복지센터", address: "경기도 화성시 남양읍 남양성지로 192-5", lat: 37.2117, lng: 126.8168 },
-  { id: "hyangnam", label: "향남읍 행정복지센터", address: "경기도 화성시 향남읍 발안로 89", lat: 37.1318, lng: 126.9209 },
-  { id: "dongtan", label: "동탄역", address: "경기도 화성시 동탄역로 151", lat: 37.2003, lng: 127.0957 },
-  { id: "bongdam", label: "봉담읍 행정복지센터", address: "경기도 화성시 봉담읍 샘마을1길 8", lat: 37.2203, lng: 126.9498 },
-  { id: "byeongjeom", label: "병점역", address: "경기도 화성시 병점노을로 12", lat: 37.2073, lng: 127.0341 },
-  { id: "mado", label: "마도면 문화센터", address: "경기도 화성시 마도면 마도북로 389", lat: 37.2054, lng: 126.7753 },
-];
-
 type DaumPostcodeData = {
   address?: string;
   roadAddress?: string;
@@ -294,6 +284,16 @@ function loadDaumPostcode() {
     script.onerror = () => reject(new Error("주소 검색 스크립트를 불러오지 못했습니다."));
     document.head.appendChild(script);
   });
+}
+
+async function openDaumAddressSearch(onSelect: (address: AddressCandidate) => void) {
+  const Postcode = await loadDaumPostcode();
+
+  new Postcode({
+    oncomplete: async (data: DaumPostcodeData) => {
+      onSelect(await addressCandidateFromPostcode(data));
+    },
+  }).open();
 }
 
 
@@ -2590,7 +2590,20 @@ function EasyLocationSelector({
   onUseActivityArea: () => void;
   onUseAddress: (address: AddressCandidate) => void;
 }) {
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [addressSearchState, setAddressSearchState] = useState<"idle" | "loading" | "error">("idle");
+  const openAddressSearch = async () => {
+    setAddressSearchState("loading");
+
+    try {
+      await openDaumAddressSearch((address) => {
+        onUseAddress(address);
+        setAddressSearchState("idle");
+      });
+      setAddressSearchState("idle");
+    } catch {
+      setAddressSearchState("error");
+    }
+  };
 
   return (
     <div className="surface">
@@ -2617,8 +2630,8 @@ function EasyLocationSelector({
           selected={mode === "address"}
           icon={Search}
           title="주소 검색"
-          description="실제 주소 검색"
-          onClick={() => setSearchOpen(true)}
+          description={addressSearchState === "loading" ? "주소 검색 여는 중" : "카카오 주소 검색으로 선택"}
+          onClick={openAddressSearch}
         />
       </div>
 
@@ -2632,15 +2645,11 @@ function EasyLocationSelector({
           {note}
         </div>
       )}
-
-      {searchOpen && (
-        <AddressSearchDialog
-          onSelect={(address) => {
-            onUseAddress(address);
-            setSearchOpen(false);
-          }}
-          onClose={() => setSearchOpen(false)}
-        />
+      {addressSearchState === "error" && (
+        <div className="mt-3 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-base font-bold leading-7 text-cool">
+          <span className="mr-1 text-alert">*</span>
+          주소 검색을 불러오지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.
+        </div>
       )}
     </div>
   );
@@ -2663,7 +2672,20 @@ function LocationSelector({
   onUseActivityArea: () => void;
   onUseAddress: (address: AddressCandidate) => void;
 }) {
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [addressSearchState, setAddressSearchState] = useState<"idle" | "loading" | "error">("idle");
+  const openAddressSearch = async () => {
+    setAddressSearchState("loading");
+
+    try {
+      await openDaumAddressSearch((address) => {
+        onUseAddress(address);
+        setAddressSearchState("idle");
+      });
+      setAddressSearchState("idle");
+    } catch {
+      setAddressSearchState("error");
+    }
+  };
 
   return (
     <FieldGroup label="위치 기준">
@@ -2687,8 +2709,8 @@ function LocationSelector({
             selected={mode === "address"}
             icon={Search}
             title="주소 검색"
-            description="실제 주소 검색"
-            onClick={() => setSearchOpen(true)}
+            description={addressSearchState === "loading" ? "주소 검색 여는 중" : "카카오 주소 검색으로 선택"}
+            onClick={openAddressSearch}
           />
         </div>
         <div className="mt-3 rounded-lg bg-white px-3 py-3 text-base font-black leading-6 text-ink">
@@ -2700,17 +2722,13 @@ function LocationSelector({
             {note}
           </div>
         )}
+        {addressSearchState === "error" && (
+          <div className="mt-2 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-bold leading-5 text-cool">
+            <span className="mr-1 text-alert">*</span>
+            주소 검색을 불러오지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.
+          </div>
+        )}
       </div>
-
-      {searchOpen && (
-        <AddressSearchDialog
-          onSelect={(address) => {
-            onUseAddress(address);
-            setSearchOpen(false);
-          }}
-          onClose={() => setSearchOpen(false)}
-        />
-      )}
     </FieldGroup>
   );
 }
@@ -2746,111 +2764,6 @@ function LocationModeButton({
       </span>
       {selected && <Check size={18} aria-hidden="true" />}
     </button>
-  );
-}
-
-function AddressSearchDialog({
-  onSelect,
-  onClose,
-}: {
-  onSelect: (address: AddressCandidate) => void;
-  onClose: () => void;
-}) {
-  const [query, setQuery] = useState("");
-  const [searchState, setSearchState] = useState<"idle" | "loading" | "fallback">("idle");
-  const [searchMessage, setSearchMessage] = useState("카카오/다음 주소검색으로 실제 주소를 찾을 수 있습니다.");
-  const normalizedQuery = query.trim().toLowerCase();
-  const results = mockAddressCandidates.filter((candidate) => {
-    if (!normalizedQuery) {
-      return true;
-    }
-
-    return (
-      candidate.label.toLowerCase().includes(normalizedQuery) ||
-      candidate.address.toLowerCase().includes(normalizedQuery)
-    );
-  });
-
-  const openRealAddressSearch = async () => {
-    setSearchState("loading");
-    setSearchMessage("주소 검색 창을 여는 중입니다.");
-
-    try {
-      const Postcode = await loadDaumPostcode();
-      new Postcode({
-        oncomplete: async (data: DaumPostcodeData) => {
-          onSelect(await addressCandidateFromPostcode(data));
-        },
-      }).open();
-      setSearchState("idle");
-      setSearchMessage("주소 검색 창에서 주소를 선택해 주세요.");
-    } catch {
-      setSearchState("fallback");
-      setSearchMessage("주소 검색을 불러오지 못했습니다. 아래 빠른 선택 주소를 사용할 수 있습니다.");
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 px-4 pb-4 pt-12" role="dialog" aria-modal="true" aria-labelledby="address-search-title">
-      <div className="relative w-full max-w-md rounded-lg bg-white p-5 shadow-soft">
-        <DialogCloseButton onClick={onClose} label="주소 검색 닫기" />
-        <div className="pr-10">
-          <p className="text-sm font-bold text-cool">실제 주소 검색</p>
-          <h2 id="address-search-title" className="mt-1 text-xl font-black">주소를 검색하세요</h2>
-          <p className="mt-2 text-sm leading-6 text-stone-700">
-            주소 검색은 실제 주소 검색 창을 사용합니다. 지도 키가 설정되어 있으면 실제 좌표로 추천을 계산합니다.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          className="mt-4 flex min-h-14 w-full items-center justify-center gap-2 rounded-lg bg-cool px-4 text-base font-black text-white shadow-soft transition hover:bg-coolDark"
-          onClick={openRealAddressSearch}
-          disabled={searchState === "loading"}
-        >
-          <Search size={20} aria-hidden="true" />
-          {searchState === "loading" ? "주소 검색 여는 중" : "주소 검색 창 열기"}
-        </button>
-
-        <p className={clsx("mt-3 rounded-lg px-3 py-2 text-xs font-bold leading-5", searchState === "fallback" ? "border border-orange-200 bg-orange-50 text-cool" : "bg-paper text-stone-600")}>
-          {searchState === "fallback" && <span className="mr-1 text-alert">*</span>}
-          {searchMessage}
-        </p>
-
-        <label className="mt-4 block">
-          <span className="mb-2 block text-sm font-black text-stone-700">빠른 선택 주소 검색</span>
-          <div className="relative">
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="예: 화성시청, 동탄역, 남양읍"
-              className="min-h-12 w-full rounded-lg border border-line px-3 pl-10 text-base"
-            />
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-500" size={19} aria-hidden="true" />
-          </div>
-        </label>
-
-        <div className="mt-4 max-h-60 space-y-2 overflow-y-auto pr-1">
-          {results.length > 0 ? (
-            results.map((candidate) => (
-              <button
-                key={candidate.id}
-                type="button"
-                className="w-full rounded-lg border border-line bg-white p-3 text-left transition hover:border-cool hover:bg-orange-50"
-                onClick={() => onSelect(candidate)}
-              >
-                <strong className="block text-sm font-black text-ink">{candidate.label}</strong>
-                <span className="mt-1 block text-xs font-bold leading-5 text-stone-600">{candidate.address}</span>
-              </button>
-            ))
-          ) : (
-            <p className="rounded-lg bg-paper p-3 text-sm font-bold leading-6 text-stone-600">
-              빠른 선택 결과가 없습니다. 위의 주소 검색 창을 열어 실제 주소를 검색해 주세요.
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
   );
 }
 
