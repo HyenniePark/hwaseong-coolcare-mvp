@@ -674,8 +674,7 @@ function App() {
               </button>
             )}
             <div>
-              <p className="text-sm font-bold text-cool">공모전용 mock MVP</p>
-              <h1 className="mt-1 text-3xl font-black text-ink">화성 쿨케어</h1>
+              <h1 className="text-3xl font-black text-ink">화성 쿨케어</h1>
               <p className="mt-2 text-sm leading-6 text-stone-700">
                 {profile.easyMode
                   ? "큰글씨와 큰 아이콘으로 지금 필요한 행동을 먼저 보여줍니다."
@@ -1379,7 +1378,7 @@ function HospitalFinderView({
           <div>
             <h2 className="text-xl font-black">온열질환 위험 신호 체크</h2>
             <p className="mt-2 text-sm leading-6 text-stone-700">
-              증상을 고르면 양호, 주의, 위험, 응급 단계와 필요한 다음 행동을 안내합니다.
+              지금 느끼는 증상을 선택해 주세요.
             </p>
           </div>
         </div>
@@ -1407,10 +1406,7 @@ function HospitalFinderView({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-black text-stone-700">
-                  {selectedSymptoms.length > 0 ? selectedSymptoms.length + "개 선택됨" : "증상이 있으면 눌러주세요"}
-                </p>
-                <p className="mt-1 text-xs font-bold leading-5 text-stone-500">
-                  선택한 증상만 아래에서 강도를 조절합니다.
+                  {selectedSymptoms.length > 0 ? selectedSymptoms.length + "개 선택됨" : "해당되는 증상을 선택하세요"}
                 </p>
               </div>
               {selectedSymptoms.length > 0 && (
@@ -1448,7 +1444,7 @@ function HospitalFinderView({
           {selectedSymptoms.length > 0 && (
             <div className="mt-3 rounded-lg border border-line bg-white p-3">
               <div className="mb-3 flex items-center justify-between gap-2">
-                <h3 className="text-sm font-black text-stone-700">선택한 증상 강도</h3>
+                <h3 className="text-sm font-black text-stone-700">증상이 얼마나 심한가요?</h3>
                 <span className="text-xs font-bold text-stone-500">1 약함 · 5 강함</span>
               </div>
               <div className="space-y-3">
