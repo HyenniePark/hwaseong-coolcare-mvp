@@ -115,10 +115,6 @@ function profileVulnerabilityScore(profile: UserProfile, status: CurrentStatus) 
     score += 2;
   }
 
-  if (!profile.hasAirConditioner) {
-    score += 1.5;
-  }
-
   if (profile.transport === "walk") {
     score += 1.5;
   }
@@ -221,11 +217,6 @@ export function classifyRisk(profile: UserProfile, status: CurrentStatus, weathe
   if (profile.hasChronicDisease) {
     score += 2;
     signals.push("만성질환 있음");
-  }
-
-  if (!profile.hasAirConditioner) {
-    score += 1;
-    signals.push("냉방기 없음");
   }
 
   if (profile.transport === "walk") {

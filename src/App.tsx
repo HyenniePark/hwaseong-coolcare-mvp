@@ -324,7 +324,6 @@ const initialProfile: UserProfile = {
   homeArea: "",
   age: 0,
   hasChronicDisease: false,
-  hasAirConditioner: false,
   transport: "",
   traits: [],
   easyMode: false,
@@ -1091,17 +1090,6 @@ function AccountView({
               </div>
             </label>
           </div>
-        </FieldGroup>
-
-        <FieldGroup
-          label="자택 냉방기"
-          help="에어컨, 벽걸이/스탠드형 냉방기, 이동식 에어컨, 창문형 에어컨을 포함합니다. 자택 기준으로 선택하세요."
-        >
-          <BooleanButton
-            selected={profile.hasAirConditioner}
-            label="냉방기 보유"
-            onClick={() => setField("hasAirConditioner", !profile.hasAirConditioner)}
-          />
         </FieldGroup>
 
         <FieldGroup label="주요 이동수단" required>

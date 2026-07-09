@@ -26,7 +26,6 @@ export interface UserProfile {
   homeArea: string;
   age: number;
   hasChronicDisease: boolean;
-  hasAirConditioner: boolean;
   transport: TransportMode | "";
   traits: SpecialTrait[];
   easyMode: boolean;
