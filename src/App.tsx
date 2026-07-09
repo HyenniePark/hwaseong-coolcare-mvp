@@ -1894,10 +1894,12 @@ function ShelterResultView({
       <ResultHeader title="쉼터 추천 결과" onEdit={onEdit} showEdit={false} />
       <WeatherStrip result={weather} />
       <RiskPanel risk={risk} showSignals={false} />
-      <button type="button" className="secondary-button w-full" onClick={onEdit}>
-        <ArrowLeft size={18} aria-hidden="true" />
-        제출 정보 수정
-      </button>
+      <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 shadow-soft">
+        <button type="button" className="secondary-button w-full" onClick={onEdit}>
+          <ArrowLeft size={18} aria-hidden="true" />
+          위치 정보 수정
+        </button>
+      </div>
       <div className="space-y-3">
         {recommendations.map((recommendation, index) => (
           <ShelterCard key={recommendation.shelter.id} recommendation={recommendation} rank={index + 1} />
@@ -1942,21 +1944,23 @@ function HospitalResultView({
         <ResultHeader title="병원 추천 결과" onEdit={onEdit} showEdit={false} />
         <WeatherStrip result={weather} />
         <RiskPanel risk={risk} showSignals={false} />
-        <button type="button" className="secondary-button w-full" onClick={onEdit}>
-          <ArrowLeft size={18} aria-hidden="true" />
-          증상 다시 선택
-        </button>
-        <button
-          type="button"
-          className="secondary-button w-full"
-          onClick={() => {
-            setHospitalFinderOpen(true);
-            setHospitalSearchSubmitted(false);
-          }}
-        >
-          <MapPin size={18} aria-hidden="true" />
-          위치 다시 선택
-        </button>
+        <div className="grid gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 shadow-soft">
+          <button type="button" className="secondary-button w-full" onClick={onEdit}>
+            <ArrowLeft size={18} aria-hidden="true" />
+            증상 다시 선택
+          </button>
+          <button
+            type="button"
+            className="secondary-button w-full"
+            onClick={() => {
+              setHospitalFinderOpen(true);
+              setHospitalSearchSubmitted(false);
+            }}
+          >
+            <MapPin size={18} aria-hidden="true" />
+            위치 다시 선택
+          </button>
+        </div>
         <div className="space-y-3">
           <div className="surface">
             <h3 className="text-lg font-black">증상과 선택 위치 기준 의료기관 3곳</h3>
@@ -2091,10 +2095,12 @@ function EasyShelterResultView({
         </a>
       )}
 
-      <button type="button" className="secondary-button min-h-16 w-full text-lg" onClick={onEdit}>
-        <ArrowLeft size={24} aria-hidden="true" />
-        제출 정보 수정
-      </button>
+      <div className="rounded-lg border-2 border-orange-200 bg-orange-50 p-3 shadow-soft">
+        <button type="button" className="secondary-button min-h-16 w-full text-lg" onClick={onEdit}>
+          <ArrowLeft size={24} aria-hidden="true" />
+          위치 정보 수정
+        </button>
+      </div>
 
       {first ? (
         <article className="rounded-lg border-2 border-cool bg-white p-5 shadow-soft">
@@ -2185,22 +2191,24 @@ function EasyHospitalResultView({
           </p>
         </div>
 
-        <button type="button" className="secondary-button min-h-16 w-full text-lg" onClick={onEdit}>
-          <ArrowLeft size={24} aria-hidden="true" />
-          증상 다시 선택
-        </button>
+        <div className="grid gap-3 rounded-lg border-2 border-blue-200 bg-blue-50 p-3 shadow-soft">
+          <button type="button" className="secondary-button min-h-16 w-full text-lg" onClick={onEdit}>
+            <ArrowLeft size={24} aria-hidden="true" />
+            증상 다시 선택
+          </button>
 
-        <button
-          type="button"
-          className="secondary-button min-h-16 w-full text-lg"
-          onClick={() => {
-            setHospitalFinderOpen(true);
-            setHospitalSearchSubmitted(false);
-          }}
-        >
-          <MapPin size={24} aria-hidden="true" />
-          위치 다시 선택
-        </button>
+          <button
+            type="button"
+            className="secondary-button min-h-16 w-full text-lg"
+            onClick={() => {
+              setHospitalFinderOpen(true);
+              setHospitalSearchSubmitted(false);
+            }}
+          >
+            <MapPin size={24} aria-hidden="true" />
+            위치 다시 선택
+          </button>
+        </div>
 
         {first ? (
           <article id="easy-hospital-recommendations" className="scroll-mt-4 rounded-lg border-2 border-river bg-white p-5 shadow-soft">
