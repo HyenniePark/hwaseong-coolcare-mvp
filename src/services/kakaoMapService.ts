@@ -80,6 +80,14 @@ type KakaoMapsApi = {
   };
 };
 
+export type NearbyCafeSearchStatus = "ok" | "no-key" | "sdk-unavailable" | "zero-result" | "error";
+
+export type NearbyCafeSearchResult = {
+  cafes: CafePlace[];
+  status: NearbyCafeSearchStatus;
+  message: string;
+};
+
 declare global {
   interface Window {
     kakao?: KakaoMapsApi;
@@ -218,22 +226,36 @@ function toCafePlace(place: KakaoPlaceSearchResult): CafePlace | null {
 function uniquePlaces(places: CafePlace[]) {
   const seen = new Set<string>();
 
-  return places.filter((place) => {
-    const key = place.id || place.name + place.lat + place.lng;
+  return places
+    .filter((place) => {
+      const key = place.id || place.name + place.lat + place.lng;
 
-    if (seen.has(key)) {
-      return false;
-    }
+      if (seen.has(key)) {
+        return false;
+      }
 
-    seen.add(key);
-    return true;
-  });
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => a.distanceKm - b.distanceKm);
 }
 
-export async function searchNearbyCafes(point: GeoPoint, radiusMeters = 5000): Promise<CafePlace[]> {
+export async function searchNearbyCafes(point: GeoPoint, radiusMeters = 5000): Promise<NearbyCafeSearchResult> {
+  if (!kakaoMapKey) {
+    return {
+      cafes: [],
+      status: "no-key",
+      message: "배포 환경에 카카오 JavaScript 키가 설정되어 있지 않습니다.",
+    };
+  }
+
   const placesApi = await getPlaces();
   if (!placesApi) {
-    return [];
+    return {
+      cafes: [],
+      status: "sdk-unavailable",
+      message: "카카오 지도 SDK를 불러오지 못했습니다. JavaScript 키 허용 도메인을 확인해 주세요.",
+    };
   }
 
   const { kakao, places } = placesApi;
@@ -261,13 +283,38 @@ export async function searchNearbyCafes(point: GeoPoint, radiusMeters = 5000): P
       "CE7",
       async (result, status) => {
         if (status !== "OK") {
-          resolve(await searchByKeyword());
+          const keywordResults = await searchByKeyword();
+          resolve({
+            cafes: keywordResults,
+            status: keywordResults.length > 0 ? "ok" : "zero-result",
+            message:
+              keywordResults.length > 0
+                ? "카테고리 검색 대신 키워드 검색으로 카페를 찾았습니다."
+                : "카카오 장소 검색은 연결됐지만 주변 카페 결과를 받지 못했습니다.",
+          });
           return;
         }
 
         const cafes = uniquePlaces(result.map(toCafePlace).filter((place): place is CafePlace => Boolean(place)));
 
-        resolve(cafes.length > 0 ? cafes : await searchByKeyword());
+        if (cafes.length > 0) {
+          resolve({
+            cafes,
+            status: "ok",
+            message: "카카오 카페 카테고리 검색으로 찾았습니다.",
+          });
+          return;
+        }
+
+        const keywordResults = await searchByKeyword();
+        resolve({
+          cafes: keywordResults,
+          status: keywordResults.length > 0 ? "ok" : "zero-result",
+          message:
+            keywordResults.length > 0
+              ? "카테고리 검색 대신 키워드 검색으로 카페를 찾았습니다."
+              : "카카오 장소 검색은 연결됐지만 주변 카페 결과를 받지 못했습니다.",
+        });
       },
       options,
     );

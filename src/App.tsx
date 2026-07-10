@@ -416,6 +416,7 @@ function App() {
   const [hospitalSubmitted, setHospitalSubmitted] = useState(false);
   const [cafes, setCafes] = useState<CafePlace[]>([]);
   const [cafeSearchState, setCafeSearchState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [cafeSearchMessage, setCafeSearchMessage] = useState("");
   const [dismissedEmergencyDialog, setDismissedEmergencyDialog] = useState(false);
   const [showEasyPrompt, setShowEasyPrompt] = useState(false);
   const [showBasicModePrompt, setShowBasicModePrompt] = useState(false);
@@ -650,15 +651,18 @@ function App() {
   const submitCafeSearch = () => {
     setCafeSearchState("loading");
     setCafes([]);
+    setCafeSearchMessage("");
     setActiveView("cafeResult");
 
     void searchNearbyCafes(location)
       .then((result) => {
-        setCafes(result.slice(0, 5));
+        setCafes(result.cafes.slice(0, 5));
+        setCafeSearchMessage(result.message);
         setCafeSearchState("done");
       })
       .catch(() => {
         setCafes([]);
+        setCafeSearchMessage("카카오 장소 검색 중 오류가 발생했습니다.");
         setCafeSearchState("error");
       });
   };
@@ -812,6 +816,7 @@ function App() {
         <CafeAlternativeResultView
           cafes={cafes}
           searchState={cafeSearchState}
+          searchMessage={cafeSearchMessage}
           weather={weatherResult}
           locationDisplay={locationDisplay}
           onEdit={() => setActiveView("cafe")}
@@ -1870,12 +1875,14 @@ function ShelterResultView({
 function CafeAlternativeResultView({
   cafes,
   searchState,
+  searchMessage,
   weather,
   locationDisplay,
   onEdit,
 }: {
   cafes: CafePlace[];
   searchState: "idle" | "loading" | "done" | "error";
+  searchMessage: string;
   weather: WeatherLoadResult;
   locationDisplay: string;
   onEdit: () => void;
@@ -1929,7 +1936,7 @@ function CafeAlternativeResultView({
           <EmptyResult
             icon={Coffee}
             title="주변 카페를 찾지 못했습니다"
-            body="카카오 장소 검색 연결이 안 되었거나 선택 위치 주변 검색 결과를 불러오지 못했습니다."
+            body={searchMessage || "카카오 장소 검색 연결이 안 되었거나 선택 위치 주변 검색 결과를 불러오지 못했습니다."}
           />
           <a href={fallbackSearchUrl} target="_blank" rel="noreferrer" className="primary-button w-full">
             <Search size={18} aria-hidden="true" />
