@@ -31,6 +31,13 @@ type KakaoPlaceSearchResult = {
 
 type KakaoLatLng = unknown;
 
+type KakaoPlaceSearchOptions = {
+  location?: KakaoLatLng;
+  radius?: number;
+  sort?: string;
+  size?: number;
+};
+
 type KakaoGeocoder = {
   addressSearch: (
     address: string,
@@ -47,12 +54,12 @@ type KakaoPlaces = {
   categorySearch: (
     categoryGroupCode: string,
     callback: (result: KakaoPlaceSearchResult[], status: KakaoStatus) => void,
-    options?: {
-      location?: KakaoLatLng;
-      radius?: number;
-      sort?: string;
-      size?: number;
-    },
+    options?: KakaoPlaceSearchOptions,
+  ) => void;
+  keywordSearch: (
+    keyword: string,
+    callback: (result: KakaoPlaceSearchResult[], status: KakaoStatus) => void,
+    options?: KakaoPlaceSearchOptions,
   ) => void;
 };
 
@@ -186,55 +193,83 @@ export async function reverseGeocodePoint(point: GeoPoint): Promise<string | nul
   });
 }
 
-export async function searchNearbyCafes(point: GeoPoint, radiusMeters = 3000): Promise<CafePlace[]> {
+function toCafePlace(place: KakaoPlaceSearchResult): CafePlace | null {
+  const lat = Number(place.y);
+  const lng = Number(place.x);
+  const distanceKm = Number(place.distance) / 1000;
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || !place.place_name) {
+    return null;
+  }
+
+  return {
+    id: place.id || place.place_name + "-" + lat + "-" + lng,
+    name: place.place_name,
+    address: place.address_name || "",
+    roadAddress: place.road_address_name || "",
+    lat,
+    lng,
+    phone: place.phone || "",
+    placeUrl: place.place_url || "",
+    distanceKm: Number.isFinite(distanceKm) ? distanceKm : 0,
+  };
+}
+
+function uniquePlaces(places: CafePlace[]) {
+  const seen = new Set<string>();
+
+  return places.filter((place) => {
+    const key = place.id || place.name + place.lat + place.lng;
+
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+}
+
+export async function searchNearbyCafes(point: GeoPoint, radiusMeters = 5000): Promise<CafePlace[]> {
   const placesApi = await getPlaces();
   if (!placesApi) {
     return [];
   }
 
   const { kakao, places } = placesApi;
+  const options: KakaoPlaceSearchOptions = {
+    location: new kakao.maps.LatLng(point.lat, point.lng),
+    radius: radiusMeters,
+    sort: kakao.maps.services.SortBy.DISTANCE,
+    size: 15,
+  };
 
-  return new Promise((resolve) => {
-    places.categorySearch(
-      "CE7",
-      (result, status) => {
+  const searchByKeyword = () =>
+    new Promise<CafePlace[]>((resolve) => {
+      places.keywordSearch("카페", (result, status) => {
         if (status !== "OK") {
           resolve([]);
           return;
         }
 
-        const cafes = result
-          .map((place): CafePlace | null => {
-            const lat = Number(place.y);
-            const lng = Number(place.x);
-            const distanceKm = Number(place.distance) / 1000;
+        resolve(uniquePlaces(result.map(toCafePlace).filter((place): place is CafePlace => Boolean(place))));
+      }, options);
+    });
 
-            if (!Number.isFinite(lat) || !Number.isFinite(lng) || !place.place_name) {
-              return null;
-            }
+  return new Promise((resolve) => {
+    places.categorySearch(
+      "CE7",
+      async (result, status) => {
+        if (status !== "OK") {
+          resolve(await searchByKeyword());
+          return;
+        }
 
-            return {
-              id: place.id || place.place_name + "-" + lat + "-" + lng,
-              name: place.place_name,
-              address: place.address_name || "",
-              roadAddress: place.road_address_name || "",
-              lat,
-              lng,
-              phone: place.phone || "",
-              placeUrl: place.place_url || "",
-              distanceKm: Number.isFinite(distanceKm) ? distanceKm : 0,
-            };
-          })
-          .filter((place): place is CafePlace => Boolean(place));
+        const cafes = uniquePlaces(result.map(toCafePlace).filter((place): place is CafePlace => Boolean(place)));
 
-        resolve(cafes);
+        resolve(cafes.length > 0 ? cafes : await searchByKeyword());
       },
-      {
-        location: new kakao.maps.LatLng(point.lat, point.lng),
-        radius: radiusMeters,
-        sort: kakao.maps.services.SortBy.DISTANCE,
-        size: 10,
-      },
+      options,
     );
   });
 }

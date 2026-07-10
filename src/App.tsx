@@ -1929,7 +1929,7 @@ function CafeAlternativeResultView({
           <EmptyResult
             icon={Coffee}
             title="주변 카페를 찾지 못했습니다"
-            body="카카오 지도 키가 없거나 선택 위치 주변 검색 결과가 없을 수 있습니다."
+            body="카카오 장소 검색 연결이 안 되었거나 선택 위치 주변 검색 결과를 불러오지 못했습니다."
           />
           <a href={fallbackSearchUrl} target="_blank" rel="noreferrer" className="primary-button w-full">
             <Search size={18} aria-hidden="true" />
