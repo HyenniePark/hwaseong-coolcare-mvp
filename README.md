@@ -76,6 +76,7 @@ PowerShell 보안 오류를 피하기 위해 activate와 npm run dev 대신 아�
     KMA_SHORT_TERM_FORECAST_KEY=본인_기상청_인증키
     PUBLIC_DATA_SERVICE_KEY=본인_공공데이터포털_인증키
     SHELTER_API_KEY=본인_재난안전데이터_인증키
+    KAKAO_REST_API_KEY=본인_카카오_REST_API_키
     SHELTER_API_URL=https://www.safetydata.go.kr/V2/api/DSSP-IF-10942
     KMA_BASE_NX=57
     KMA_BASE_NY=119
@@ -84,6 +85,8 @@ PowerShell 보안 오류를 피하기 위해 activate와 npm run dev 대신 아�
 주의: 실제 인증키는 채팅창, README, 코드 파일에 직접 넣지 않습니다. backend/.env에만 보관합니다.
 
 VITE_KAKAO_MAP_KEY는 선택사항입니다. 설정하면 GPS/주소를 실제 좌표로 보정하고, 없거나 실패하면 기존 행정구역 중심 fallback을 사용합니다.
+
+쉼터 대안 카페 검색은 백엔드의 KAKAO_REST_API_KEY를 사용합니다. 이 키는 Vercel 프론트엔드 환경변수에 넣지 않습니다.
 
 ## 앱 안에서 상태 확인하기
 
@@ -240,6 +243,7 @@ Render 환경변수에는 아래 이름을 추가합니다. 실제 값은 Render
     KMA_SHORT_TERM_FORECAST_KEY=본인_기상청_인증키
     PUBLIC_DATA_SERVICE_KEY=본인_공공데이터포털_인증키
     SHELTER_API_KEY=본인_재난안전데이터_인증키
+    KAKAO_REST_API_KEY=본인_카카오_REST_API_키
     SHELTER_API_URL=https://www.safetydata.go.kr/V2/api/DSSP-IF-10942
     KMA_BASE_NX=57
     KMA_BASE_NY=119
@@ -252,6 +256,7 @@ Render 환경변수에는 아래 이름을 추가합니다. 실제 값은 Render
     https://Render백엔드주소.onrender.com/api/health
     https://Render백엔드주소.onrender.com/api/weather
     https://Render백엔드주소.onrender.com/api/shelters
+    https://Render백엔드주소.onrender.com/api/cafes?lat=37.199&lng=127.099
 
 ### 3. Vercel 프론트엔드 배포
 
@@ -265,7 +270,7 @@ Vercel 환경변수에는 아래 이름을 추가합니다.
 
     VITE_API_BASE_URL=https://Render백엔드주소.onrender.com
 
-주의: Vercel에는 기상청 API 키나 공공데이터포털 키를 넣지 않습니다.
+주의: Vercel에는 기상청 API 키, 공공데이터포털 키, 카카오 REST API 키를 넣지 않습니다.
 
 ### 4. 제출 전 확인
 

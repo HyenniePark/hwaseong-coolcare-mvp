@@ -58,7 +58,8 @@ import {
   weatherHeatRiskLabel,
 } from "./lib/recommendation";
 import { fetchSheltersWithFallback, getHospitalsWithFallback, getSheltersWithFallback } from "./services/dataService";
-import { geocodeAddress, reverseGeocodePoint, searchNearbyCafes } from "./services/kakaoMapService";
+import { searchNearbyCafes } from "./services/cafeService";
+import { geocodeAddress, reverseGeocodePoint } from "./services/kakaoMapService";
 import { fetchWeatherWithFallback, type WeatherLoadResult } from "./services/weatherService";
 import type {
   CurrentStatus,
@@ -1757,6 +1758,18 @@ function IntegrationStatusView({
           meta={shelterDataset.data.length + "개 쉼터 로드"}
         />
         <StatusCard
+          icon={Coffee}
+          title="쉼터 대안 카페 검색"
+          status={apiBaseUrl === "미설정" ? "미설정" : "백엔드 REST"}
+          tone={apiBaseUrl === "미설정" ? "warn" : "ok"}
+          detail={
+            apiBaseUrl === "미설정"
+              ? "VITE_API_BASE_URL이 없어 카페 검색 API를 호출할 수 없습니다."
+              : "백엔드에서 카카오 로컬 REST API로 주변 카페를 검색합니다."
+          }
+          meta="KAKAO_REST_API_KEY는 백엔드에만 보관"
+        />
+        <StatusCard
           icon={Navigation}
           title="지도 기능"
           status={kakaoMapReady ? "주소 좌표 변환" : "외부 링크"}
@@ -1773,6 +1786,7 @@ function IntegrationStatusView({
           <p>백엔드: {apiBaseUrl}</p>
           <p>백엔드 상태 확인: {apiBaseUrl === "미설정" ? "VITE_API_BASE_URL 필요" : apiBaseUrl + "/api/health"}</p>
           <p>쉼터 API 확인: {apiBaseUrl === "미설정" ? "VITE_API_BASE_URL 필요" : apiBaseUrl + "/api/shelters"}</p>
+          <p>카페 API 확인: {apiBaseUrl === "미설정" ? "VITE_API_BASE_URL 필요" : apiBaseUrl + "/api/cafes?lat=37.199&lng=127.099"}</p>
         </div>
       </section>
 

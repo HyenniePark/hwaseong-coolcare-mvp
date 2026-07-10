@@ -1,10 +1,11 @@
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from .weather import get_weather
 from .shelters import get_shelters
+from .cafes import get_cafes
 
 
 def _cors_origins() -> list[str]:
@@ -34,7 +35,7 @@ def root() -> dict[str, object]:
     return {
         "service": "Hwaseong Coolcare API",
         "status": "ok",
-        "endpoints": ["/api/health", "/api/weather", "/api/shelters"],
+        "endpoints": ["/api/health", "/api/weather", "/api/shelters", "/api/cafes"],
     }
 
 
@@ -51,3 +52,12 @@ async def weather() -> dict[str, object]:
 @app.get("/api/shelters")
 async def shelters() -> dict[str, object]:
     return await get_shelters()
+
+
+@app.get("/api/cafes")
+async def cafes(
+    lat: float = Query(..., ge=-90, le=90),
+    lng: float = Query(..., ge=-180, le=180),
+    radius: int = Query(5000, ge=0, le=20000),
+) -> dict[str, object]:
+    return await get_cafes(lat=lat, lng=lng, radius=radius)
