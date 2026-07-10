@@ -3,12 +3,16 @@ import type { LucideIcon } from "lucide-react";
 import {
   Activity,
   AlertTriangle,
+  BatteryLow,
+  Brain,
   Bus,
   Car,
   Check,
   ChevronDown,
+  CircleHelp,
+  Droplets,
   Footprints,
-  Gauge,
+  Frown,
   HeartPulse,
   HelpCircle,
   Home,
@@ -22,12 +26,15 @@ import {
   ShieldCheck,
   Siren,
   ThermometerSun,
+  Repeat2,
+  RotateCcw,
   UserPlus,
   UserRound,
   UsersRound,
   Wind,
   X,
   ArrowLeft,
+  Zap,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -79,16 +86,16 @@ type LocationSelectorControlProps = {
 };
 
 const symptomVisuals: Record<SymptomId, { shortLabel: string; icon: LucideIcon }> = {
-  dizziness: { shortLabel: "어지러움", icon: Activity },
-  nausea: { shortLabel: "메스꺼움", icon: HeartPulse },
-  headache: { shortLabel: "두통", icon: Gauge },
-  heavySweat: { shortLabel: "땀 많음", icon: Wind },
-  muscleCramp: { shortLabel: "근육경련", icon: Activity },
-  fatigue: { shortLabel: "피로감", icon: HeartPulse },
-  confusion: { shortLabel: "의식 흐림", icon: AlertTriangle },
+  dizziness: { shortLabel: "어지러움", icon: RotateCcw },
+  nausea: { shortLabel: "메스꺼움", icon: Frown },
+  headache: { shortLabel: "두통", icon: Brain },
+  heavySweat: { shortLabel: "땀 많음", icon: Droplets },
+  muscleCramp: { shortLabel: "근육경련", icon: Zap },
+  fatigue: { shortLabel: "피로감", icon: BatteryLow },
+  confusion: { shortLabel: "의식 흐림", icon: CircleHelp },
   highFever: { shortLabel: "고열", icon: ThermometerSun },
   breathingTrouble: { shortLabel: "호흡곤란", icon: Wind },
-  repeatedVomiting: { shortLabel: "반복 구토", icon: Siren },
+  repeatedVomiting: { shortLabel: "반복 구토", icon: Repeat2 },
 };
 
 const symptomGroups = [
