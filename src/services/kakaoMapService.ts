@@ -88,6 +88,8 @@ export type NearbyCafeSearchResult = {
   message: string;
 };
 
+type KakaoMapsLoadFailureReason = "script-error" | "no-kakao" | "no-services";
+
 declare global {
   interface Window {
     kakao?: KakaoMapsApi;
@@ -96,6 +98,23 @@ declare global {
 
 const kakaoMapKey = import.meta.env.VITE_KAKAO_MAP_KEY?.trim();
 let kakaoMapsPromise: Promise<KakaoMapsApi | null> | null = null;
+let kakaoMapsLoadFailureReason: KakaoMapsLoadFailureReason | null = null;
+
+function kakaoMapsLoadFailureMessage() {
+  if (kakaoMapsLoadFailureReason === "script-error") {
+    return "카카오 지도 SDK 스크립트 요청이 실패했습니다. JavaScript 키와 SDK 도메인 등록 상태를 확인해 주세요.";
+  }
+
+  if (kakaoMapsLoadFailureReason === "no-kakao") {
+    return "SDK 파일은 내려왔지만 Kakao 지도 객체가 생성되지 않았습니다. JavaScript SDK 도메인에 현재 사이트 주소가 등록됐는지 확인해 주세요.";
+  }
+
+  if (kakaoMapsLoadFailureReason === "no-services") {
+    return "카카오 지도 SDK는 로드됐지만 장소 검색 라이브러리를 불러오지 못했습니다. services 라이브러리 로드 설정을 확인해 주세요.";
+  }
+
+  return "카카오 지도 SDK를 불러오지 못했습니다. JavaScript 키와 SDK 도메인 설정을 확인해 주세요.";
+}
 
 function loadKakaoMaps() {
   if (!kakaoMapKey) {
@@ -113,15 +132,26 @@ function loadKakaoMaps() {
   kakaoMapsPromise = new Promise((resolve) => {
     const existing = document.querySelector<HTMLScriptElement>('script[data-kakao-map-sdk="true"]');
 
+    const resolveWithFailure = (reason: KakaoMapsLoadFailureReason) => {
+      kakaoMapsLoadFailureReason = reason;
+      resolve(null);
+    };
+
     const resolveWhenReady = () => {
       const kakao = window.kakao;
       if (!kakao?.maps) {
-        resolve(null);
+        resolveWithFailure("no-kakao");
         return;
       }
 
       kakao.maps.load(() => {
-        resolve(kakao.maps.services ? kakao : null);
+        if (kakao.maps.services) {
+          kakaoMapsLoadFailureReason = null;
+          resolve(kakao);
+          return;
+        }
+
+        resolveWithFailure("no-services");
       });
     };
 
@@ -132,7 +162,7 @@ function loadKakaoMaps() {
       }
 
       existing.addEventListener("load", resolveWhenReady, { once: true });
-      existing.addEventListener("error", () => resolve(null), { once: true });
+      existing.addEventListener("error", () => resolveWithFailure("script-error"), { once: true });
       return;
     }
 
@@ -140,10 +170,11 @@ function loadKakaoMaps() {
     script.async = true;
     script.dataset.kakaoMapSdk = "true";
     script.src =
-      "https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&libraries=services&appkey=" +
-      encodeURIComponent(kakaoMapKey);
+      "https://dapi.kakao.com/v2/maps/sdk.js?appkey=" +
+      encodeURIComponent(kakaoMapKey) +
+      "&autoload=false&libraries=services";
     script.onload = resolveWhenReady;
-    script.onerror = () => resolve(null);
+    script.onerror = () => resolveWithFailure("script-error");
     document.head.appendChild(script);
   });
 
@@ -254,7 +285,7 @@ export async function searchNearbyCafes(point: GeoPoint, radiusMeters = 5000): P
     return {
       cafes: [],
       status: "sdk-unavailable",
-      message: "카카오 지도 SDK를 불러오지 못했습니다. JavaScript 키 허용 도메인을 확인해 주세요.",
+      message: kakaoMapsLoadFailureMessage(),
     };
   }
 
