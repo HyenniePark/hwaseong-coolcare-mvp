@@ -1,4 +1,4 @@
-export type ViewId = "account" | "shelter" | "shelterResult" | "hospital" | "hospitalResult" | "easy" | "status";
+export type ViewId = "account" | "shelter" | "shelterResult" | "cafe" | "cafeResult" | "hospital" | "hospitalResult" | "easy" | "status";
 
 export type TransportMode = "walk" | "bus" | "car" | "caregiver";
 
@@ -71,6 +71,18 @@ export interface MedicalFacility {
   phone: string;
   type: string;
   departments: string;
+}
+
+export interface CafePlace {
+  id: string;
+  name: string;
+  address: string;
+  roadAddress: string;
+  lat: number;
+  lng: number;
+  phone: string;
+  placeUrl: string;
+  distanceKm: number;
 }
 
 export interface ShelterRecommendation {

@@ -10,7 +10,9 @@ import {
   Check,
   ChevronDown,
   CircleHelp,
+  Coffee,
   Droplets,
+  ExternalLink,
   Footprints,
   Frown,
   HeartPulse,
@@ -56,10 +58,11 @@ import {
   weatherHeatRiskLabel,
 } from "./lib/recommendation";
 import { fetchSheltersWithFallback, getHospitalsWithFallback, getSheltersWithFallback } from "./services/dataService";
-import { geocodeAddress, reverseGeocodePoint } from "./services/kakaoMapService";
+import { geocodeAddress, reverseGeocodePoint, searchNearbyCafes } from "./services/kakaoMapService";
 import { fetchWeatherWithFallback, type WeatherLoadResult } from "./services/weatherService";
 import type {
   CurrentStatus,
+  CafePlace,
   GeoPoint,
   HospitalSearchStatus,
   ShelterRecommendation,
@@ -308,6 +311,7 @@ const viewItems: Array<{
   icon: LucideIcon;
 }> = [
   { id: "shelter", label: "쉼터 찾기", easyLabel: "쉼터 찾기", icon: Home },
+  { id: "cafe", label: "쉼터 대안 카페 찾기", easyLabel: "카페 찾기", icon: Coffee },
   { id: "hospital", label: "위험 신호 체크", easyLabel: "위험 신호 체크", icon: Hospital },
   { id: "account", label: "계정 정보", easyLabel: "내 정보", icon: UserRound },
   { id: "easy", label: "큰글씨 모드", easyLabel: "큰글씨", icon: ShieldCheck },
@@ -410,6 +414,8 @@ function App() {
   const [hospitalStatus, setHospitalStatus] = useState<HospitalSearchStatus>(initialHospitalStatus);
   const [shelterSubmitted, setShelterSubmitted] = useState(false);
   const [hospitalSubmitted, setHospitalSubmitted] = useState(false);
+  const [cafes, setCafes] = useState<CafePlace[]>([]);
+  const [cafeSearchState, setCafeSearchState] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [dismissedEmergencyDialog, setDismissedEmergencyDialog] = useState(false);
   const [showEasyPrompt, setShowEasyPrompt] = useState(false);
   const [showBasicModePrompt, setShowBasicModePrompt] = useState(false);
@@ -641,6 +647,22 @@ function App() {
     setActiveView("shelterResult");
   };
 
+  const submitCafeSearch = () => {
+    setCafeSearchState("loading");
+    setCafes([]);
+    setActiveView("cafeResult");
+
+    void searchNearbyCafes(location)
+      .then((result) => {
+        setCafes(result.slice(0, 5));
+        setCafeSearchState("done");
+      })
+      .catch(() => {
+        setCafes([]);
+        setCafeSearchState("error");
+      });
+  };
+
   const enableBasicMode = () => {
     setProfile({ ...profile, easyMode: false });
     setShowEasyPrompt(false);
@@ -774,6 +796,26 @@ function App() {
             onEdit={() => setActiveView("shelter")}
           />
         )
+      )}
+      {activeView === "cafe" && (
+        <CafeAlternativeView
+          onSubmit={submitCafeSearch}
+          locationMode={locationMode}
+          locationDisplay={locationDisplay}
+          locationNote={locationNote}
+          requestLocation={requestLocation}
+          useActivityAreaLocation={useActivityAreaLocation}
+          useAddressLocation={useAddressLocation}
+        />
+      )}
+      {activeView === "cafeResult" && (
+        <CafeAlternativeResultView
+          cafes={cafes}
+          searchState={cafeSearchState}
+          weather={weatherResult}
+          locationDisplay={locationDisplay}
+          onEdit={() => setActiveView("cafe")}
+        />
       )}
       {activeView === "hospital" && (
         profile.easyMode ? (
@@ -1356,6 +1398,54 @@ function EasyShelterFinderView({
   );
 }
 
+function CafeAlternativeView({
+  onSubmit,
+  locationMode,
+  locationDisplay,
+  locationNote,
+  requestLocation,
+  useActivityAreaLocation,
+  useAddressLocation,
+}: {
+  onSubmit: () => void;
+} & LocationSelectorControlProps) {
+  return (
+    <section className="space-y-4">
+      <div className="surface">
+        <div className="flex items-start gap-3">
+          <div className="rounded-lg bg-orange-50 p-3 text-cool">
+            <Coffee size={28} aria-hidden="true" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black">쉼터 대안 카페 찾기</h2>
+            <p className="mt-2 text-sm leading-6 text-stone-700">
+              쉼터 이용이 어렵거나 잠시 더위를 피할 곳이 필요할 때 가까운 카페를 확인합니다.
+            </p>
+          </div>
+        </div>
+
+        <LocationSelector
+          mode={locationMode}
+          display={locationDisplay}
+          note={locationNote}
+          onUseGps={requestLocation}
+          onUseActivityArea={useActivityAreaLocation}
+          onUseAddress={useAddressLocation}
+        />
+
+        <div className="mt-4 rounded-lg border border-orange-200 bg-orange-50 px-3 py-3 text-sm font-bold leading-6 text-cool">
+          카페 운영시간과 이용 가능 여부는 카카오맵이나 전화로 한 번 더 확인해 주세요.
+        </div>
+
+        <button type="button" className="primary-button mt-5 w-full" onClick={onSubmit}>
+          <Check size={18} aria-hidden="true" />
+          카페 추천 보기
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function HospitalFinderView({
   status,
   setStatus,
@@ -1773,6 +1863,80 @@ function ShelterResultView({
           <ShelterCard key={recommendation.shelter.id} recommendation={recommendation} rank={index + 1} />
         ))}
       </div>
+    </section>
+  );
+}
+
+function CafeAlternativeResultView({
+  cafes,
+  searchState,
+  weather,
+  locationDisplay,
+  onEdit,
+}: {
+  cafes: CafePlace[];
+  searchState: "idle" | "loading" | "done" | "error";
+  weather: WeatherLoadResult;
+  locationDisplay: string;
+  onEdit: () => void;
+}) {
+  const fallbackSearchUrl = kakaoSearchUrl(locationDisplay + " 카페");
+
+  return (
+    <section className="space-y-4">
+      <ResultHeader title="쉼터 대안 카페 결과" onEdit={onEdit} showEdit={false} />
+      <WeatherStrip result={weather} />
+
+      <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 shadow-soft">
+        <button type="button" className="secondary-button w-full" onClick={onEdit}>
+          <ArrowLeft size={18} aria-hidden="true" />
+          위치 다시 선택
+        </button>
+      </div>
+
+      <div className="surface">
+        <div className="flex items-start gap-3">
+          <Coffee className="mt-1 text-cool" size={24} aria-hidden="true" />
+          <div>
+            <h3 className="text-lg font-black">가까운 카페</h3>
+            <p className="mt-2 text-sm leading-6 text-stone-700">
+              {locationDisplay} 기준으로 가까운 카페를 찾았습니다. 운영시간과 이용 가능 여부는 방문 전 확인해 주세요.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {searchState === "loading" && (
+        <div className="surface text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-lg bg-orange-50 text-cool">
+            <Coffee size={30} aria-hidden="true" />
+          </div>
+          <h3 className="mt-3 text-lg font-black">카페를 찾는 중입니다</h3>
+          <p className="mt-2 text-sm leading-6 text-stone-700">선택한 위치 주변 카페를 가까운 순서로 확인하고 있습니다.</p>
+        </div>
+      )}
+
+      {searchState !== "loading" && cafes.length > 0 && (
+        <div className="space-y-3">
+          {cafes.map((cafe, index) => (
+            <CafeCard key={cafe.id} cafe={cafe} rank={index + 1} />
+          ))}
+        </div>
+      )}
+
+      {searchState !== "loading" && cafes.length === 0 && (
+        <div className="space-y-3">
+          <EmptyResult
+            icon={Coffee}
+            title="주변 카페를 찾지 못했습니다"
+            body="카카오 지도 키가 없거나 선택 위치 주변 검색 결과가 없을 수 있습니다."
+          />
+          <a href={fallbackSearchUrl} target="_blank" rel="noreferrer" className="primary-button w-full">
+            <Search size={18} aria-hidden="true" />
+            카카오맵에서 카페 검색
+          </a>
+        </div>
+      )}
     </section>
   );
 }
@@ -2669,6 +2833,49 @@ function ShelterCard({
         <Navigation size={18} aria-hidden="true" />
         길찾기 검색
       </a>
+    </article>
+  );
+}
+
+function CafeCard({ cafe, rank }: { cafe: CafePlace; rank: number }) {
+  const mapUrl = cafe.placeUrl || kakaoSearchUrl(cafe.name);
+  const address = cafe.roadAddress || cafe.address || "주소 정보 없음";
+
+  return (
+    <article className="surface">
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-cool font-black text-white">
+          {rank}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-black text-cool">쉼터 대안 후보</p>
+          <h3 className="mt-1 text-lg font-black leading-6">{cafe.name}</h3>
+          <p className="mt-2 text-sm leading-6 text-stone-700">{address}</p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 border-y border-line py-3 text-sm">
+        <Metric label="거리" value={formatDistance(cafe.distanceKm)} />
+        <Metric label="운영 확인" value="필요" />
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        {cafe.phone ? (
+          <a href={"tel:" + cafe.phone} className="secondary-button">
+            <Phone size={18} aria-hidden="true" />
+            전화
+          </a>
+        ) : (
+          <span className="secondary-button opacity-60">
+            <Phone size={18} aria-hidden="true" />
+            전화 없음
+          </span>
+        )}
+        <a href={mapUrl} target="_blank" rel="noreferrer" className="primary-button">
+          <ExternalLink size={18} aria-hidden="true" />
+          카카오맵 확인
+        </a>
+      </div>
     </article>
   );
 }

@@ -1,4 +1,4 @@
-import type { GeoPoint } from "../types";
+import type { CafePlace, GeoPoint } from "../types";
 
 type KakaoAddressSearchResult = {
   x?: string;
@@ -17,6 +17,20 @@ type KakaoCoordAddressResult = {
 
 type KakaoStatus = "OK" | "ZERO_RESULT" | "ERROR";
 
+type KakaoPlaceSearchResult = {
+  id?: string;
+  place_name?: string;
+  address_name?: string;
+  road_address_name?: string;
+  phone?: string;
+  place_url?: string;
+  x?: string;
+  y?: string;
+  distance?: string;
+};
+
+type KakaoLatLng = unknown;
+
 type KakaoGeocoder = {
   addressSearch: (
     address: string,
@@ -29,13 +43,31 @@ type KakaoGeocoder = {
   ) => void;
 };
 
+type KakaoPlaces = {
+  categorySearch: (
+    categoryGroupCode: string,
+    callback: (result: KakaoPlaceSearchResult[], status: KakaoStatus) => void,
+    options?: {
+      location?: KakaoLatLng;
+      radius?: number;
+      sort?: string;
+      size?: number;
+    },
+  ) => void;
+};
+
 type KakaoMapsApi = {
   maps: {
+    LatLng: new (latitude: number, longitude: number) => KakaoLatLng;
     load: (callback: () => void) => void;
     services: {
       Geocoder: new () => KakaoGeocoder;
+      Places: new () => KakaoPlaces;
       Status: {
         OK: KakaoStatus;
+      };
+      SortBy: {
+        DISTANCE: string;
       };
     };
   };
@@ -108,6 +140,11 @@ async function getGeocoder() {
   return kakao ? new kakao.maps.services.Geocoder() : null;
 }
 
+async function getPlaces() {
+  const kakao = await loadKakaoMaps();
+  return kakao ? { kakao, places: new kakao.maps.services.Places() } : null;
+}
+
 export async function geocodeAddress(address: string): Promise<GeoPoint | null> {
   const geocoder = await getGeocoder();
   if (!geocoder) {
@@ -146,5 +183,58 @@ export async function reverseGeocodePoint(point: GeoPoint): Promise<string | nul
       const first = result[0];
       resolve(first?.road_address?.address_name || first?.address?.address_name || null);
     });
+  });
+}
+
+export async function searchNearbyCafes(point: GeoPoint, radiusMeters = 3000): Promise<CafePlace[]> {
+  const placesApi = await getPlaces();
+  if (!placesApi) {
+    return [];
+  }
+
+  const { kakao, places } = placesApi;
+
+  return new Promise((resolve) => {
+    places.categorySearch(
+      "CE7",
+      (result, status) => {
+        if (status !== "OK") {
+          resolve([]);
+          return;
+        }
+
+        const cafes = result
+          .map((place): CafePlace | null => {
+            const lat = Number(place.y);
+            const lng = Number(place.x);
+            const distanceKm = Number(place.distance) / 1000;
+
+            if (!Number.isFinite(lat) || !Number.isFinite(lng) || !place.place_name) {
+              return null;
+            }
+
+            return {
+              id: place.id || place.place_name + "-" + lat + "-" + lng,
+              name: place.place_name,
+              address: place.address_name || "",
+              roadAddress: place.road_address_name || "",
+              lat,
+              lng,
+              phone: place.phone || "",
+              placeUrl: place.place_url || "",
+              distanceKm: Number.isFinite(distanceKm) ? distanceKm : 0,
+            };
+          })
+          .filter((place): place is CafePlace => Boolean(place));
+
+        resolve(cafes);
+      },
+      {
+        location: new kakao.maps.LatLng(point.lat, point.lng),
+        radius: radiusMeters,
+        sort: kakao.maps.services.SortBy.DISTANCE,
+        size: 10,
+      },
+    );
   });
 }
