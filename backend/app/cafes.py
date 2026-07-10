@@ -43,13 +43,13 @@ def _kakao_error_detail(response: httpx.Response) -> str:
     try:
         payload = response.json()
     except ValueError:
-        return ""
+        return response.text[:160].strip()
 
     if not isinstance(payload, dict):
         return ""
 
     parts: list[str] = []
-    for key in ("code", "msg", "error", "error_description"):
+    for key in ("code", "msg", "errorType", "message", "error", "error_description"):
         value = payload.get(key)
         if value:
             parts.append(f"{key}: {value}")
