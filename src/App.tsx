@@ -1071,7 +1071,7 @@ function AccountView({
               </div>
             </label>
             <label>
-              <span className="mb-2 block text-sm font-black text-stone-700">세부 행정구</span>
+              <span className="mb-2 block text-sm font-black text-stone-700">세부 행정구역</span>
               <div className="relative">
                 <select
                   value={profile.homeArea}
@@ -1079,7 +1079,7 @@ function AccountView({
                   disabled={!profile.homeGu}
                   className="min-h-12 w-full appearance-none rounded-lg border border-line bg-white px-3 pr-10 text-base font-semibold disabled:bg-paper disabled:text-stone-400"
                 >
-                  <option value="">세부 행정구 선택</option>
+                  <option value="">세부 행정구역 선택</option>
                   {profile.homeGu && hwaseongDistrictGroups[profile.homeGu as keyof typeof hwaseongDistrictGroups].map((district) => (
                     <option key={district} value={district}>
                       {district}
