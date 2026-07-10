@@ -39,6 +39,24 @@ def _fallback(status: str, message: str) -> dict[str, object]:
     }
 
 
+def _kakao_error_detail(response: httpx.Response) -> str:
+    try:
+        payload = response.json()
+    except ValueError:
+        return ""
+
+    if not isinstance(payload, dict):
+        return ""
+
+    parts: list[str] = []
+    for key in ("code", "msg", "error", "error_description"):
+        value = payload.get(key)
+        if value:
+            parts.append(f"{key}: {value}")
+
+    return " / ".join(parts)
+
+
 def _to_float(value: Any) -> float | None:
     try:
         return float(str(value).replace(",", ""))
@@ -151,7 +169,12 @@ async def get_cafes(lat: float, lng: float, radius: int = 5000) -> dict[str, obj
     except httpx.HTTPStatusError as error:
         status_code = error.response.status_code
         if status_code in {401, 403}:
-            return _fallback("error", f"카카오 로컬 API 인증 오류 HTTP {status_code}. REST API 키를 확인해 주세요.")
+            detail = _kakao_error_detail(error.response)
+            detail_text = f" ({detail})" if detail else ""
+            return _fallback(
+                "error",
+                f"카카오 로컬 API 인증 오류 HTTP {status_code}{detail_text}. REST API 키와 허용 설정을 확인해 주세요.",
+            )
 
         return _fallback("error", f"카카오 로컬 API 응답 오류 HTTP {status_code}")
     except httpx.RequestError as error:
