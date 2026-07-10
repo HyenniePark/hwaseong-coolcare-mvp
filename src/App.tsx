@@ -24,6 +24,7 @@ import {
   Menu,
   Navigation,
   Phone,
+  Plus,
   Search,
   ShieldCheck,
   Siren,
@@ -1902,6 +1903,13 @@ function CafeAlternativeResultView({
   onEdit: () => void;
 }) {
   const fallbackSearchUrl = kakaoSearchUrl(locationDisplay + " 카페");
+  const [showAllCafes, setShowAllCafes] = useState(false);
+  const visibleCafes = showAllCafes ? cafes : cafes.slice(0, 3);
+  const hiddenCafeCount = cafes.length - visibleCafes.length;
+
+  useEffect(() => {
+    setShowAllCafes(false);
+  }, [cafes]);
 
   return (
     <section className="space-y-4">
@@ -1939,9 +1947,15 @@ function CafeAlternativeResultView({
 
       {searchState !== "loading" && cafes.length > 0 && (
         <div className="space-y-3">
-          {cafes.map((cafe, index) => (
+          {visibleCafes.map((cafe, index) => (
             <CafeCard key={cafe.id} cafe={cafe} rank={index + 1} />
           ))}
+          {hiddenCafeCount > 0 && (
+            <button type="button" className="secondary-button w-full" onClick={() => setShowAllCafes(true)}>
+              <Plus size={18} aria-hidden="true" />
+              {hiddenCafeCount}개 더 보기
+            </button>
+          )}
         </div>
       )}
 
