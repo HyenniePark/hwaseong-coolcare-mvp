@@ -2858,6 +2858,18 @@ function ShelterCard({
   );
 }
 
+function formatWalkingTime(distanceKmValue: number) {
+  const minutes = Math.max(1, Math.round((distanceKmValue * 1000) / 67));
+
+  if (minutes < 60) {
+    return "약 " + minutes + "분";
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const restMinutes = minutes % 60;
+  return restMinutes > 0 ? "약 " + hours + "시간 " + restMinutes + "분" : "약 " + hours + "시간";
+}
+
 function CafeCard({ cafe, rank }: { cafe: CafePlace; rank: number }) {
   const mapUrl = cafe.placeUrl || kakaoSearchUrl(cafe.name);
   const address = cafe.roadAddress || cafe.address || "주소 정보 없음";
@@ -2869,15 +2881,14 @@ function CafeCard({ cafe, rank }: { cafe: CafePlace; rank: number }) {
           {rank}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black text-cool">쉼터 대안 후보</p>
-          <h3 className="mt-1 text-lg font-black leading-6">{cafe.name}</h3>
+          <h3 className="text-lg font-black leading-6">{cafe.name}</h3>
           <p className="mt-2 text-sm leading-6 text-stone-700">{address}</p>
         </div>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 border-y border-line py-3 text-sm">
         <Metric label="거리" value={formatDistance(cafe.distanceKm)} />
-        <Metric label="운영 확인" value="필요" />
+        <Metric label="도보" value={formatWalkingTime(cafe.distanceKm)} />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2">
