@@ -3106,7 +3106,7 @@ function SymptomToggleCard({
     <button
       type="button"
       className={clsx(
-        "min-h-20 rounded-lg border bg-white p-3 text-left transition",
+        "flex min-h-14 items-center gap-3 rounded-lg border bg-white p-3 text-left transition",
         selected && emergency && "border-alert bg-rose-50 text-alert",
         selected && !emergency && "border-river bg-blue-50 text-river",
         !selected && "border-line text-ink hover:border-cool",
@@ -3114,13 +3114,11 @@ function SymptomToggleCard({
       onClick={onToggle}
       aria-pressed={selected}
     >
-      <span className="flex items-start justify-between gap-2">
-        <span className={clsx("flex h-9 w-9 items-center justify-center rounded-lg", emergency ? "bg-rose-100 text-alert" : "bg-blue-50 text-river")}>
-          <Icon size={21} aria-hidden="true" />
-        </span>
-        {selected && <Check size={18} aria-hidden="true" />}
+      <span className={clsx("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", emergency ? "bg-rose-100 text-alert" : "bg-blue-50 text-river")}>
+        <Icon size={21} aria-hidden="true" />
       </span>
-      <strong className="mt-2 block text-base leading-5">{visual.shortLabel}</strong>
+      <strong className="min-w-0 flex-1 text-base leading-5">{visual.shortLabel}</strong>
+      {selected && <Check size={18} aria-hidden="true" />}
     </button>
   );
 }
