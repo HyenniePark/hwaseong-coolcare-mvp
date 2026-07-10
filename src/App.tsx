@@ -9,6 +9,7 @@ import {
   Car,
   Check,
   ChevronDown,
+  ChevronUp,
   CircleHelp,
   Coffee,
   Droplets,
@@ -1160,7 +1161,7 @@ function AccountView({
             <HelpOptionButton
               selected={profile.hasChronicDisease}
               label="만성질환 있음"
-              help="예: 고혈압, 당뇨병, 심장질환, 신장질환, 호흡기질환처럼 더위에 취약할 수 있는 지속 관리 질환을 뜻합니다."
+              help={"더위에 취약할 수 있는 지속 관리 질환을 뜻합니다.\n\n예: 고혈압, 당뇨병, 심장질환 등"}
               onClick={() => setField("hasChronicDisease", !profile.hasChronicDisease)}
             />
             <HelpOptionButton
@@ -1956,6 +1957,12 @@ function CafeAlternativeResultView({
               {hiddenCafeCount}개 더 보기
             </button>
           )}
+          {showAllCafes && cafes.length > 3 && (
+            <button type="button" className="secondary-button w-full" onClick={() => setShowAllCafes(false)}>
+              <ChevronUp size={18} aria-hidden="true" />
+              접기
+            </button>
+          )}
         </div>
       )}
 
@@ -2286,7 +2293,11 @@ function EasyHospitalResultView({
                 <p className="mt-3 text-xl font-bold leading-8 text-stone-700">{formatDistance(first.distanceKm)} · {first.hospital.phone}</p>
               </div>
             </div>
-            <p className="mt-4 rounded-lg bg-paper p-3 text-lg font-bold leading-8 text-stone-700">{first.hospital.departments}</p>
+            <div className="mt-4 rounded-lg bg-paper p-3">
+              <p className="text-base font-black text-stone-600">진료과목</p>
+              <p className="mt-2 text-lg font-bold leading-8 text-stone-700">{formatDepartmentList(first.hospital.departments)}</p>
+              <p className="mt-2 text-base font-black text-stone-600">운영시간: 전화 확인</p>
+            </div>
             <div className="mt-5 grid grid-cols-2 gap-3">
               <a href={"tel:" + first.hospital.phone} className="secondary-button min-h-16 text-lg">
                 <Phone size={24} aria-hidden="true" />
@@ -2884,6 +2895,15 @@ function formatWalkingTime(distanceKmValue: number) {
   return restMinutes > 0 ? "약 " + hours + "시간 " + restMinutes + "분" : "약 " + hours + "시간";
 }
 
+function formatDepartmentList(departments: string) {
+  const items = departments
+    .split(/[,\s/]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return Array.from(new Set(items)).join(" / ") || "진료과목 확인 필요";
+}
+
 function CafeCard({ cafe, rank }: { cafe: CafePlace; rank: number }) {
   const mapUrl = cafe.placeUrl || kakaoSearchUrl(cafe.name);
   const address = cafe.roadAddress || cafe.address || "주소 정보 없음";
@@ -2933,11 +2953,15 @@ function HospitalCard({ item }: { item: ReturnType<typeof recommendHospitals>[nu
         <HeartPulse className="mt-1 text-river" size={24} aria-hidden="true" />
         <div className="min-w-0 flex-1">
           <h3 className="text-lg font-black">{item.hospital.name}</h3>
-          <p className="mt-1 text-sm text-stone-600">
-            {item.hospital.type} · {formatDistance(item.distanceKm)}
-          </p>
-          <p className="mt-2 text-sm leading-6 text-stone-700">{item.hospital.departments}</p>
+          <p className="mt-1 text-sm text-stone-600">{item.hospital.type}</p>
+          <p className="mt-2 text-xs font-black text-stone-500">진료과목</p>
+          <p className="mt-1 text-sm leading-6 text-stone-700">{formatDepartmentList(item.hospital.departments)}</p>
         </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 border-y border-line py-3 text-sm">
+        <Metric label="거리" value={formatDistance(item.distanceKm)} />
+        <Metric label="운영시간" value="전화 확인" />
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
@@ -3121,7 +3145,7 @@ function InfoTooltip({ text }: { text: string }) {
       >
         <HelpCircle size={16} aria-hidden="true" />
       </button>
-      <span className="pointer-events-none absolute bottom-8 right-0 z-30 hidden w-64 max-w-[calc(100vw-3rem)] rounded-lg border border-line bg-white p-3 text-left text-xs font-bold leading-5 text-stone-700 shadow-soft group-hover:block group-focus-within:block">
+      <span className="pointer-events-none absolute bottom-8 right-0 z-30 hidden w-64 max-w-[calc(100vw-3rem)] whitespace-pre-line rounded-lg border border-line bg-white p-3 text-left text-xs font-bold leading-5 text-stone-700 shadow-soft group-hover:block group-focus-within:block">
         {text}
       </span>
     </span>
