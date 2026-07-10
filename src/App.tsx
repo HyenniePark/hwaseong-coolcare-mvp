@@ -1870,70 +1870,85 @@ function recommendationToneForRisk(risk: RiskResult) {
 }
 
 function formatRiskContext(risk: RiskResult) {
-  return risk.signals.length > 0 ? risk.signals.join(" · ") : "입력 정보 기준 큰 위험 신호 없음";
+  if (risk.signals.length === 0) {
+    return "큰 위험 신호 없음";
+  }
+
+  const primarySignals = risk.signals.slice(0, 2).join(" · ");
+  return risk.signals.length > 2 ? primarySignals + " 외 " + (risk.signals.length - 2) + "개" : primarySignals;
 }
 
 function actionGuideForRisk(risk: RiskResult, purpose: "shelter" | "hospital") {
   if (risk.level === "emergency") {
-    return "119 상담 → 보호자 동행 요청 → 가까운 의료기관 확인";
+    return "119 상담 → 의료기관 확인";
   }
 
   if (purpose === "hospital") {
     return risk.level === "danger"
-      ? "병원 전화 확인 → 방문 가능하면 이동 → 증상 악화 시 119 상담"
-      : "시원한 곳에서 휴식 → 증상 지속 시 의료기관 상담";
+      ? "전화 확인 → 방문 가능 시 이동"
+      : "휴식 → 증상 지속 시 상담";
   }
 
   if (risk.level === "caution" || risk.level === "danger") {
-    return "실내 이동 → 수분 섭취 → 증상 지속 시 병원 상담";
+    return "실내 이동 → 수분 섭취";
   }
 
-  return "수분 섭취 → 더운 시간대 이동 줄이기 → 필요 시 쉼터 확인";
+  return "수분 섭취 → 야외활동 줄이기";
 }
 
 function shelterRecommendationReason(risk: RiskResult, recommendation?: ShelterRecommendation) {
   if (risk.level === "emergency") {
-    return "응급 위험 신호가 있어 쉼터 이동만으로 판단하지 않고 119 상담과 의료기관 확인을 함께 안내합니다.";
+    return "119 상담과 의료기관 확인을 우선 안내";
   }
 
   if (!recommendation) {
-    return "현재 위치와 입력 정보를 기준으로 이용 가능한 쉼터 후보를 확인했습니다.";
+    return "현재 위치 기준 쉼터 후보 확인";
   }
 
   if (risk.level === "caution" || risk.level === "danger") {
-    return recommendation.title + "를 현재 위험 신호, 이동 거리, 가까운 의료기관 접근성을 함께 고려해 우선 추천했습니다.";
+    return "위험 신호, 거리, 의료기관 접근성 고려";
   }
 
-  return recommendation.title + "를 현재 위치에서 가까운 실내 대피 장소로 우선 추천했습니다.";
+  return "가까운 실내 대피 장소 우선";
 }
 
 function hospitalRecommendationReason(risk: RiskResult, hospital?: ReturnType<typeof recommendHospitals>[number]) {
   if (risk.level === "emergency") {
-    return "응급 신호가 있어 119 상담을 우선 안내하면서 가까운 의료기관 후보를 함께 보여드립니다.";
+    return "119 상담과 가까운 의료기관을 함께 안내";
   }
 
   if (!hospital) {
-    return "선택한 증상과 위치를 기준으로 의료기관 후보를 확인했습니다.";
+    return "증상과 위치 기준 후보 확인";
   }
 
-  return "선택한 증상 강도와 취약요인을 반영해 가까운 의료기관을 먼저 보여드립니다.";
+  return "증상 강도와 취약요인 반영";
 }
 
 function RecommendationReasonPanel({
   current,
-  riskLabel,
   reason,
   action,
   tone = "orange",
   large = false,
 }: {
   current: string;
-  riskLabel: string;
   reason: string;
   action: string;
   tone?: "green" | "orange" | "rose" | "blue";
   large?: boolean;
 }) {
+  const iconToneClass = clsx(
+    tone === "green" && "bg-emerald-100 text-emerald-700",
+    tone === "orange" && "bg-orange-100 text-cool",
+    tone === "rose" && "bg-rose-100 text-alert",
+    tone === "blue" && "bg-blue-100 text-river",
+  );
+  const items: Array<{ label: string; value: string; icon: LucideIcon }> = [
+    { label: "반영 정보", value: current, icon: Activity },
+    { label: "추천 이유", value: reason, icon: Check },
+    { label: "다음 행동", value: action, icon: Navigation },
+  ];
+
   return (
     <div
       className={clsx(
@@ -1945,36 +1960,23 @@ function RecommendationReasonPanel({
       )}
     >
       <div className="flex items-start gap-3">
-        <Brain
-          className={clsx(
-            "mt-1",
-            tone === "green" && "text-emerald-700",
-            tone === "orange" && "text-cool",
-            tone === "rose" && "text-alert",
-            tone === "blue" && "text-river",
-          )}
-          size={large ? 30 : 24}
-          aria-hidden="true"
-        />
+        <div className={clsx("mt-1 flex shrink-0 items-center justify-center rounded-lg", iconToneClass, large ? "h-12 w-12" : "h-10 w-10")}>
+          <Brain size={large ? 28 : 22} aria-hidden="true" />
+        </div>
         <div className="min-w-0 flex-1">
           <h3 className={clsx("font-black", large ? "text-2xl" : "text-lg")}>추천 기준</h3>
-          <div className={clsx("mt-3 space-y-2 text-stone-700", large ? "text-lg font-bold leading-8" : "text-sm leading-6")}>
-            <p>
-              <span className="font-black text-ink">현재 상태: </span>
-              {current}
-            </p>
-            <p>
-              <span className="font-black text-ink">위험도: </span>
-              {riskLabel}
-            </p>
-            <p>
-              <span className="font-black text-ink">추천 이유: </span>
-              {reason}
-            </p>
-            <p>
-              <span className="font-black text-ink">다음 행동: </span>
-              {action}
-            </p>
+          <div className="mt-3 grid gap-2">
+            {items.map(({ label, value, icon: Icon }) => (
+              <div key={label} className="flex items-center gap-3 rounded-lg border border-white/70 bg-white/80 p-3">
+                <span className={clsx("flex shrink-0 items-center justify-center rounded-lg", iconToneClass, large ? "h-10 w-10" : "h-8 w-8")}>
+                  <Icon size={large ? 22 : 18} aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className={clsx("font-black text-stone-500", large ? "text-base" : "text-xs")}>{label}</p>
+                  <p className={clsx("font-black leading-6 text-ink", large ? "text-lg" : "text-sm")}>{value}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -2000,7 +2002,6 @@ function ShelterResultView({
       <RiskPanel risk={risk} showSignals={false} />
       <RecommendationReasonPanel
         current={formatRiskContext(risk)}
-        riskLabel={risk.title}
         reason={shelterRecommendationReason(risk, recommendations[0])}
         action={actionGuideForRisk(risk, "shelter")}
         tone={recommendationToneForRisk(risk)}
@@ -2051,9 +2052,8 @@ function CafeAlternativeResultView({
 
       <RecommendationReasonPanel
         current={"위치 기준: " + locationDisplay}
-        riskLabel="쉼터 대안"
-        reason="공공쉼터 이용이 어렵거나 운영 확인이 필요한 경우를 대비해 가까운 실내 대기 장소를 함께 안내합니다."
-        action="운영 여부 확인 → 가까운 카페 이동 → 증상 지속 시 병원 또는 119 확인"
+        reason="공공쉼터 이용이 어려울 때 대안 안내"
+        action="운영 확인 → 가까운 카페 이동"
         tone="orange"
       />
 
@@ -2159,7 +2159,6 @@ function HospitalResultView({
         <RiskPanel risk={risk} showSignals={false} />
         <RecommendationReasonPanel
           current={formatRiskContext(risk)}
-          riskLabel={risk.title}
           reason={hospitalRecommendationReason(risk, hospitals[0])}
           action={actionGuideForRisk(risk, "hospital")}
           tone={recommendationToneForRisk(risk)}
@@ -2309,7 +2308,6 @@ function EasyShelterResultView({
 
       <RecommendationReasonPanel
         current={formatRiskContext(risk)}
-        riskLabel={risk.title}
         reason={shelterRecommendationReason(risk, first)}
         action={actionGuideForRisk(risk, "shelter")}
         tone={recommendationToneForRisk(risk)}
@@ -2420,7 +2418,6 @@ function EasyHospitalResultView({
 
         <RecommendationReasonPanel
           current={formatRiskContext(risk)}
-          riskLabel={risk.title}
           reason={hospitalRecommendationReason(risk, first)}
           action={actionGuideForRisk(risk, "hospital")}
           tone={recommendationToneForRisk(risk)}
