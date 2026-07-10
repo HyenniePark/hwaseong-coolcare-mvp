@@ -78,17 +78,17 @@ type LocationSelectorControlProps = {
   useAddressLocation: (address: AddressCandidate) => void;
 };
 
-const symptomVisuals: Record<SymptomId, { shortLabel: string; hint: string; icon: LucideIcon }> = {
-  dizziness: { shortLabel: "어지러움", hint: "빙빙 돌거나 휘청거림", icon: Activity },
-  nausea: { shortLabel: "메스꺼움", hint: "속이 울렁거림", icon: HeartPulse },
-  headache: { shortLabel: "두통", hint: "머리가 아픔", icon: Gauge },
-  heavySweat: { shortLabel: "땀 많음", hint: "땀이 계속 남", icon: Wind },
-  muscleCramp: { shortLabel: "근육경련", hint: "쥐가 나거나 뻣뻣함", icon: Activity },
-  fatigue: { shortLabel: "피로감", hint: "힘이 빠지고 지침", icon: HeartPulse },
-  confusion: { shortLabel: "의식 흐림", hint: "말이 어눌하거나 멍함", icon: AlertTriangle },
-  highFever: { shortLabel: "고열", hint: "몸이 매우 뜨거움", icon: ThermometerSun },
-  breathingTrouble: { shortLabel: "호흡곤란", hint: "숨쉬기 어려움", icon: Wind },
-  repeatedVomiting: { shortLabel: "반복 구토", hint: "계속 토함", icon: Siren },
+const symptomVisuals: Record<SymptomId, { shortLabel: string; icon: LucideIcon }> = {
+  dizziness: { shortLabel: "어지러움", icon: Activity },
+  nausea: { shortLabel: "메스꺼움", icon: HeartPulse },
+  headache: { shortLabel: "두통", icon: Gauge },
+  heavySweat: { shortLabel: "땀 많음", icon: Wind },
+  muscleCramp: { shortLabel: "근육경련", icon: Activity },
+  fatigue: { shortLabel: "피로감", icon: HeartPulse },
+  confusion: { shortLabel: "의식 흐림", icon: AlertTriangle },
+  highFever: { shortLabel: "고열", icon: ThermometerSun },
+  breathingTrouble: { shortLabel: "호흡곤란", icon: Wind },
+  repeatedVomiting: { shortLabel: "반복 구토", icon: Siren },
 };
 
 const symptomGroups = [
@@ -3037,7 +3037,6 @@ function EasySymptomToggleCard({
       </span>
       <span className="min-w-0 flex-1">
         <strong className="block text-2xl font-black leading-8">{visual.shortLabel}</strong>
-        <small className="mt-1 block text-lg font-bold leading-7 text-stone-600">{visual.hint}</small>
       </span>
       {selected && <Check size={26} aria-hidden="true" />}
     </button>
@@ -3060,10 +3059,7 @@ function EasySymptomSeverityControl({
   return (
     <div className="rounded-lg bg-paper p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <div>
-          <h4 className="text-2xl font-black leading-8">{visual.shortLabel}</h4>
-          <p className="mt-1 text-base font-bold text-stone-600">{visual.hint}</p>
-        </div>
+        <h4 className="text-2xl font-black leading-8">{visual.shortLabel}</h4>
         <button type="button" className="secondary-button shrink-0" onClick={onClear}>
           지우기
         </button>
@@ -3110,7 +3106,7 @@ function SymptomToggleCard({
     <button
       type="button"
       className={clsx(
-        "min-h-24 rounded-lg border bg-white p-3 text-left transition",
+        "min-h-20 rounded-lg border bg-white p-3 text-left transition",
         selected && emergency && "border-alert bg-rose-50 text-alert",
         selected && !emergency && "border-river bg-blue-50 text-river",
         !selected && "border-line text-ink hover:border-cool",
@@ -3125,7 +3121,6 @@ function SymptomToggleCard({
         {selected && <Check size={18} aria-hidden="true" />}
       </span>
       <strong className="mt-2 block text-base leading-5">{visual.shortLabel}</strong>
-      <small className="mt-1 block text-xs font-bold leading-5 text-stone-500">{visual.hint}</small>
     </button>
   );
 }
