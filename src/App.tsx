@@ -1857,6 +1857,131 @@ function StatusBadge({ children, tone }: { children: ReactNode; tone: "ok" | "wa
   );
 }
 
+function recommendationToneForRisk(risk: RiskResult) {
+  if (risk.level === "emergency") {
+    return "rose";
+  }
+
+  if (risk.level === "danger" || risk.level === "caution") {
+    return "orange";
+  }
+
+  return "green";
+}
+
+function formatRiskContext(risk: RiskResult) {
+  return risk.signals.length > 0 ? risk.signals.join(" · ") : "입력 정보 기준 큰 위험 신호 없음";
+}
+
+function actionGuideForRisk(risk: RiskResult, purpose: "shelter" | "hospital") {
+  if (risk.level === "emergency") {
+    return "119 상담 → 보호자 동행 요청 → 가까운 의료기관 확인";
+  }
+
+  if (purpose === "hospital") {
+    return risk.level === "danger"
+      ? "병원 전화 확인 → 방문 가능하면 이동 → 증상 악화 시 119 상담"
+      : "시원한 곳에서 휴식 → 증상 지속 시 의료기관 상담";
+  }
+
+  if (risk.level === "caution" || risk.level === "danger") {
+    return "실내 이동 → 수분 섭취 → 증상 지속 시 병원 상담";
+  }
+
+  return "수분 섭취 → 더운 시간대 이동 줄이기 → 필요 시 쉼터 확인";
+}
+
+function shelterRecommendationReason(risk: RiskResult, recommendation?: ShelterRecommendation) {
+  if (risk.level === "emergency") {
+    return "응급 위험 신호가 있어 쉼터 이동만으로 판단하지 않고 119 상담과 의료기관 확인을 함께 안내합니다.";
+  }
+
+  if (!recommendation) {
+    return "현재 위치와 입력 정보를 기준으로 이용 가능한 쉼터 후보를 확인했습니다.";
+  }
+
+  if (risk.level === "caution" || risk.level === "danger") {
+    return recommendation.title + "를 현재 위험 신호, 이동 거리, 가까운 의료기관 접근성을 함께 고려해 우선 추천했습니다.";
+  }
+
+  return recommendation.title + "를 현재 위치에서 가까운 실내 대피 장소로 우선 추천했습니다.";
+}
+
+function hospitalRecommendationReason(risk: RiskResult, hospital?: ReturnType<typeof recommendHospitals>[number]) {
+  if (risk.level === "emergency") {
+    return "응급 신호가 있어 119 상담을 우선 안내하면서 가까운 의료기관 후보를 함께 보여드립니다.";
+  }
+
+  if (!hospital) {
+    return "선택한 증상과 위치를 기준으로 의료기관 후보를 확인했습니다.";
+  }
+
+  return "선택한 증상 강도와 취약요인을 반영해 가까운 의료기관을 먼저 보여드립니다.";
+}
+
+function RecommendationReasonPanel({
+  current,
+  riskLabel,
+  reason,
+  action,
+  tone = "orange",
+  large = false,
+}: {
+  current: string;
+  riskLabel: string;
+  reason: string;
+  action: string;
+  tone?: "green" | "orange" | "rose" | "blue";
+  large?: boolean;
+}) {
+  return (
+    <div
+      className={clsx(
+        "rounded-lg border p-4 shadow-soft",
+        tone === "green" && "border-emerald-200 bg-emerald-50",
+        tone === "orange" && "border-orange-200 bg-orange-50",
+        tone === "rose" && "border-rose-200 bg-rose-50",
+        tone === "blue" && "border-blue-200 bg-blue-50",
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <Brain
+          className={clsx(
+            "mt-1",
+            tone === "green" && "text-emerald-700",
+            tone === "orange" && "text-cool",
+            tone === "rose" && "text-alert",
+            tone === "blue" && "text-river",
+          )}
+          size={large ? 30 : 24}
+          aria-hidden="true"
+        />
+        <div className="min-w-0 flex-1">
+          <h3 className={clsx("font-black", large ? "text-2xl" : "text-lg")}>추천 기준</h3>
+          <div className={clsx("mt-3 space-y-2 text-stone-700", large ? "text-lg font-bold leading-8" : "text-sm leading-6")}>
+            <p>
+              <span className="font-black text-ink">현재 상태: </span>
+              {current}
+            </p>
+            <p>
+              <span className="font-black text-ink">위험도: </span>
+              {riskLabel}
+            </p>
+            <p>
+              <span className="font-black text-ink">추천 이유: </span>
+              {reason}
+            </p>
+            <p>
+              <span className="font-black text-ink">다음 행동: </span>
+              {action}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ShelterResultView({
   risk,
   recommendations,
@@ -1873,6 +1998,13 @@ function ShelterResultView({
       <ResultHeader title="쉼터 추천 결과" onEdit={onEdit} showEdit={false} />
       <WeatherStrip result={weather} />
       <RiskPanel risk={risk} showSignals={false} />
+      <RecommendationReasonPanel
+        current={formatRiskContext(risk)}
+        riskLabel={risk.title}
+        reason={shelterRecommendationReason(risk, recommendations[0])}
+        action={actionGuideForRisk(risk, "shelter")}
+        tone={recommendationToneForRisk(risk)}
+      />
       <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 shadow-soft">
         <button type="button" className="secondary-button w-full" onClick={onEdit}>
           <ArrowLeft size={18} aria-hidden="true" />
@@ -1916,6 +2048,14 @@ function CafeAlternativeResultView({
     <section className="space-y-4">
       <ResultHeader title="쉼터 대안 카페 결과" onEdit={onEdit} showEdit={false} />
       <WeatherStrip result={weather} />
+
+      <RecommendationReasonPanel
+        current={"위치 기준: " + locationDisplay}
+        riskLabel="쉼터 대안"
+        reason="공공쉼터 이용이 어렵거나 운영 확인이 필요한 경우를 대비해 가까운 실내 대기 장소를 함께 안내합니다."
+        action="운영 여부 확인 → 가까운 카페 이동 → 증상 지속 시 병원 또는 119 확인"
+        tone="orange"
+      />
 
       <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 shadow-soft">
         <button type="button" className="secondary-button w-full" onClick={onEdit}>
@@ -2017,6 +2157,13 @@ function HospitalResultView({
         <ResultHeader title="병원 추천 결과" onEdit={onEdit} showEdit={false} />
         <WeatherStrip result={weather} />
         <RiskPanel risk={risk} showSignals={false} />
+        <RecommendationReasonPanel
+          current={formatRiskContext(risk)}
+          riskLabel={risk.title}
+          reason={hospitalRecommendationReason(risk, hospitals[0])}
+          action={actionGuideForRisk(risk, "hospital")}
+          tone={recommendationToneForRisk(risk)}
+        />
         <div className="grid gap-2 rounded-lg border border-orange-200 bg-orange-50 p-3 shadow-soft">
           <button type="button" className="secondary-button w-full" onClick={onEdit}>
             <ArrowLeft size={18} aria-hidden="true" />
@@ -2160,6 +2307,15 @@ function EasyShelterResultView({
         <p className="mt-4 text-xl font-bold leading-9 text-stone-700">{risk.guidance}</p>
       </div>
 
+      <RecommendationReasonPanel
+        current={formatRiskContext(risk)}
+        riskLabel={risk.title}
+        reason={shelterRecommendationReason(risk, first)}
+        action={actionGuideForRisk(risk, "shelter")}
+        tone={recommendationToneForRisk(risk)}
+        large
+      />
+
       {risk.level === "emergency" && (
         <a href="tel:119" className="danger-button min-h-16 w-full text-lg">
           <Siren size={24} aria-hidden="true" />
@@ -2261,6 +2417,15 @@ function EasyHospitalResultView({
             가까운 의료기관을 먼저 보여드립니다. 방문 전 전화로 확인해 주세요.
           </p>
         </div>
+
+        <RecommendationReasonPanel
+          current={formatRiskContext(risk)}
+          riskLabel={risk.title}
+          reason={hospitalRecommendationReason(risk, first)}
+          action={actionGuideForRisk(risk, "hospital")}
+          tone={recommendationToneForRisk(risk)}
+          large
+        />
 
         <div className="grid gap-3 rounded-lg border-2 border-orange-200 bg-orange-50 p-3 shadow-soft">
           <button type="button" className="secondary-button min-h-16 w-full text-lg" onClick={onEdit}>
