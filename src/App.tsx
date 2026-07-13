@@ -494,13 +494,26 @@ function App() {
   }, []);
   const shelterCurrentStatus = useMemo(() => shelterToCurrentStatus(shelterStatus), [shelterStatus]);
   const hospitalCurrentStatus = useMemo(() => hospitalToCurrentStatus(hospitalStatus), [hospitalStatus]);
-  const shelterRisk = useMemo(() => classifyRisk(profile, shelterCurrentStatus, weather), [profile, shelterCurrentStatus, weather]);
   const hospitalRisk = useMemo(() => classifyHospitalRisk(profile, hospitalStatus, weather), [profile, hospitalStatus, weather]);
+  const shelterRecommendationStatus = useMemo(() => {
+    if (!hospitalSubmitted) {
+      return shelterCurrentStatus;
+    }
+
+    return {
+      symptoms: Array.from(new Set([...shelterCurrentStatus.symptoms, ...hospitalCurrentStatus.symptoms])),
+    };
+  }, [hospitalCurrentStatus, hospitalSubmitted, shelterCurrentStatus]);
+  const shelterRisk = useMemo(() => classifyRisk(profile, shelterRecommendationStatus, weather), [profile, shelterRecommendationStatus, weather]);
+  const shelterResultRisk = useMemo(
+    () => (hospitalSubmitted ? mergeRisk(shelterRisk, hospitalRisk) : shelterRisk),
+    [hospitalRisk, hospitalSubmitted, shelterRisk],
+  );
   const combinedRisk = useMemo(() => mergeRisk(shelterRisk, hospitalRisk), [shelterRisk, hospitalRisk]);
 
   const shelterRecommendations = useMemo(
-    () => recommendShelters(shelters, hospitals, profile, shelterCurrentStatus, location, weather),
-    [shelters, hospitals, profile, shelterCurrentStatus, location, weather],
+    () => recommendShelters(shelters, hospitals, profile, shelterRecommendationStatus, location, weather, shelterResultRisk.level),
+    [shelters, hospitals, profile, shelterRecommendationStatus, location, weather, shelterResultRisk.level],
   );
 
   const hospitalRecommendations = useMemo(
@@ -790,14 +803,14 @@ function App() {
       {activeView === "shelterResult" && (
         profile.easyMode ? (
           <EasyShelterResultView
-            risk={shelterRisk}
+            risk={shelterResultRisk}
             recommendations={shelterRecommendations}
             onEdit={() => setActiveView("shelter")}
             onOpenHospital={() => setActiveView("hospital")}
           />
         ) : (
           <ShelterResultView
-            risk={shelterRisk}
+            risk={shelterResultRisk}
             recommendations={shelterRecommendations}
             weather={weatherResult}
             onEdit={() => setActiveView("shelter")}
@@ -1909,6 +1922,14 @@ function shelterRecommendationReason(risk: RiskResult, recommendation?: ShelterR
     return "위험 신호, 거리, 의료기관 접근성 고려";
   }
 
+  if (recommendation.title.includes("의료기관")) {
+    return "몸 상태와 의료기관 접근성 고려";
+  }
+
+  if (recommendation.title.includes("쾌적")) {
+    return "더위 수준과 냉방 여건 고려";
+  }
+
   return "가까운 실내 대피 장소 우선";
 }
 
@@ -2052,7 +2073,7 @@ function ShelterResultView({
         action={
           <button
             type="button"
-            className="secondary-button shrink-0 px-3 py-2 text-xs"
+            className="secondary-button min-h-9 shrink-0 px-2.5 py-1.5 text-xs leading-none"
             onClick={() => setShowReasonScreen(true)}
           >
             <Brain size={16} aria-hidden="true" />
@@ -3048,11 +3069,11 @@ function RiskPanel({
           aria-hidden="true"
         />
         <div className="min-w-0 flex-1">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
             <h3 className="text-lg font-black">{risk.title}</h3>
             {action}
           </div>
-          <p className="mt-1 text-sm leading-6 text-stone-700">{risk.guidance}</p>
+          <p className="mt-0.5 text-sm leading-6 text-stone-700">{risk.guidance}</p>
         </div>
       </div>
       {showSignals && risk.signals.length > 0 && (

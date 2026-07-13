@@ -19,6 +19,7 @@ import type {
 } from "../types";
 
 type WeatherLike = typeof mockWeather;
+type ShelterPickKind = "fast" | "comfort" | "medical";
 
 const toRad = (value: number) => (value * Math.PI) / 180;
 
@@ -382,6 +383,58 @@ function makeReasons(
   return reasons;
 }
 
+function uniqueShelterPickOrder(kinds: ShelterPickKind[]) {
+  const baseOrder: ShelterPickKind[] = ["fast", "comfort", "medical"];
+  const ordered = kinds.filter((kind, index) => kinds.indexOf(kind) === index);
+
+  return [
+    ...ordered,
+    ...baseOrder.filter((kind) => !ordered.includes(kind)),
+  ];
+}
+
+function shelterPickOrder(
+  profile: UserProfile,
+  status: CurrentStatus,
+  weather: WeatherLike = mockWeather,
+  riskLevel: RiskResult["level"] = "normal",
+): ShelterPickKind[] {
+  const hasSymptoms = status.symptoms.length > 0;
+  const weatherScore = weatherStressScore(weather);
+  const hasMobilityConcern = profile.transport === "walk" || profile.traits.includes("limitedMobility");
+  const hasMedicalConcern = profile.hasChronicDisease || profile.age >= 75;
+
+  if (riskLevel === "emergency") {
+    return uniqueShelterPickOrder(["fast", "medical", "comfort"]);
+  }
+
+  if (riskLevel === "danger") {
+    return uniqueShelterPickOrder(["medical", "fast", "comfort"]);
+  }
+
+  if (hasSymptoms) {
+    return uniqueShelterPickOrder(["medical", hasMobilityConcern ? "fast" : "comfort"]);
+  }
+
+  if (weatherScore >= 4 || profile.traits.includes("outdoorWorker")) {
+    return uniqueShelterPickOrder(["comfort", hasMobilityConcern ? "fast" : "medical"]);
+  }
+
+  if (hasMedicalConcern) {
+    return uniqueShelterPickOrder(["medical", "comfort", "fast"]);
+  }
+
+  if (hasMobilityConcern) {
+    return uniqueShelterPickOrder(["fast", "medical", "comfort"]);
+  }
+
+  if (profile.age >= 65) {
+    return uniqueShelterPickOrder(["comfort", "medical", "fast"]);
+  }
+
+  return uniqueShelterPickOrder(["fast", "comfort", "medical"]);
+}
+
 export function recommendShelters(
   shelters: CoolingShelter[],
   hospitals: MedicalFacility[],
@@ -389,6 +442,7 @@ export function recommendShelters(
   status: CurrentStatus,
   userLocation: GeoPoint,
   currentWeather: WeatherLike = mockWeather,
+  riskLevel: RiskResult["level"] = "normal",
 ): ShelterRecommendation[] {
   if (shelters.length === 0 || hospitals.length === 0) {
     return [];
@@ -421,20 +475,20 @@ export function recommendShelters(
     };
   });
 
-  const picks = [
-    {
-      title: "가장 빠른 쉼터",
-      item: [...enriched].sort((a, b) => b.fastScore - a.fastScore)[0]!,
-    },
-    {
-      title: "가장 쾌적한 쉼터",
-      item: [...enriched].sort((a, b) => b.comfortFitScore - a.comfortFitScore)[0]!,
-    },
-    {
-      title: "의료기관과 가까운 쉼터",
-      item: [...enriched].sort((a, b) => b.medicalFitScore - a.medicalFitScore)[0]!,
-    },
-  ];
+  const pickTitle: Record<ShelterPickKind, string> = {
+    fast: "가장 빠른 쉼터",
+    comfort: "가장 쾌적한 쉼터",
+    medical: "의료기관과 가까운 쉼터",
+  };
+  const pickItem = {
+    fast: [...enriched].sort((a, b) => b.fastScore - a.fastScore)[0]!,
+    comfort: [...enriched].sort((a, b) => b.comfortFitScore - a.comfortFitScore)[0]!,
+    medical: [...enriched].sort((a, b) => b.medicalFitScore - a.medicalFitScore)[0]!,
+  } satisfies Record<ShelterPickKind, (typeof enriched)[number]>;
+  const picks = shelterPickOrder(profile, status, currentWeather, riskLevel).map((kind) => ({
+    title: pickTitle[kind],
+    item: pickItem[kind],
+  }));
 
   const used = new Set<string>();
 
