@@ -681,6 +681,12 @@ function App() {
     setDismissedShelterAlternativeDialog(false);
     if (!next.hasEmergencySignal) {
       setDismissedEmergencyDialog(false);
+      if (hospitalStatus.emergencyFromShelter) {
+        setHospitalStatus({ ...hospitalStatus, emergencyFromShelter: false });
+        if (selectedSymptomsFromSeverity(hospitalStatus.severities).length === 0) {
+          setHospitalSubmitted(false);
+        }
+      }
     }
   };
 
@@ -2260,23 +2266,77 @@ function HospitalResultView({
   const canSearchHospitals = risk.level === "danger" || risk.level === "emergency";
   const [hospitalFinderOpen, setHospitalFinderOpen] = useState(false);
   const [hospitalSearchSubmitted, setHospitalSearchSubmitted] = useState(false);
+  const [showReasonScreen, setShowReasonScreen] = useState(false);
   const showHospitalRecommendations = canSearchHospitals && hospitalSearchSubmitted;
+  const topHospital = hospitals[0];
+  const reasonTone = recommendationToneForRisk(risk);
+  const reasonCurrent = formatRiskContext(risk);
+  const reasonText = hospitalRecommendationReason(risk, topHospital);
+  const reasonAction = actionGuideForRisk(risk, "hospital");
   const openHospitalFinder = () => {
     setHospitalFinderOpen(true);
     setHospitalSearchSubmitted(false);
+    setShowReasonScreen(false);
   };
+
+  if (showHospitalRecommendations && showReasonScreen) {
+    return (
+      <section className="space-y-4">
+        <div className="surface">
+          <button type="button" className="secondary-button w-full" onClick={() => setShowReasonScreen(false)}>
+            <ArrowLeft size={18} aria-hidden="true" />
+            병원 추천 결과로 돌아가기
+          </button>
+          <div className="mt-5">
+            <p className="text-sm font-black text-river">추천 기준</p>
+            <h2 className="mt-1 text-xl font-black">왜 이 의료기관을 먼저 보여드렸나요?</h2>
+            <p className="mt-2 text-sm leading-6 text-stone-700">
+              입력한 증상, 위치, 취약요인을 기준으로 병원 추천에 반영한 내용을 정리했습니다.
+            </p>
+          </div>
+        </div>
+
+        <RecommendationReasonPanel
+          current={reasonCurrent}
+          reason={reasonText}
+          action={reasonAction}
+          tone={reasonTone}
+          large
+        />
+
+        {topHospital && (
+          <div className="surface">
+            <p className="text-sm font-black text-river">현재 추천 의료기관</p>
+            <h3 className="mt-1 text-lg font-black">{topHospital.hospital.name}</h3>
+            <p className="mt-2 text-sm leading-6 text-stone-700">{topHospital.hospital.address}</p>
+            <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-line pt-3 text-sm">
+              <Metric label="거리" value={formatDistance(topHospital.distanceKm)} />
+              <Metric label="진료과목" value={formatDepartmentList(topHospital.hospital.departments)} />
+            </div>
+          </div>
+        )}
+      </section>
+    );
+  }
 
   if (showHospitalRecommendations) {
     return (
       <section className="space-y-4">
         <ResultHeader title="병원 추천 결과" onEdit={onEdit} showEdit={false} />
         <WeatherStrip result={weather} />
-        <RiskPanel risk={risk} showSignals={false} />
-        <RecommendationReasonPanel
-          current={formatRiskContext(risk)}
-          reason={hospitalRecommendationReason(risk, hospitals[0])}
-          action={actionGuideForRisk(risk, "hospital")}
-          tone={recommendationToneForRisk(risk)}
+        <RiskPanel
+          risk={risk}
+          showSignals={false}
+          action={
+            <button
+              type="button"
+              className="secondary-button min-h-9 shrink-0 px-2.5 py-1.5 text-xs leading-none"
+              onClick={() => setShowReasonScreen(true)}
+            >
+              <Brain size={16} aria-hidden="true" />
+              추천 기준 보기
+            </button>
+          }
         />
         <div className="grid gap-2 rounded-lg border border-orange-200 bg-orange-50 p-3 shadow-soft">
           <button type="button" className="secondary-button w-full" onClick={onEdit}>
@@ -2289,6 +2349,7 @@ function HospitalResultView({
             onClick={() => {
               setHospitalFinderOpen(true);
               setHospitalSearchSubmitted(false);
+              setShowReasonScreen(false);
             }}
           >
             <MapPin size={18} aria-hidden="true" />
@@ -2514,11 +2575,55 @@ function EasyHospitalResultView({
   const canSearchHospitals = risk.level === "danger" || risk.level === "emergency";
   const [hospitalFinderOpen, setHospitalFinderOpen] = useState(false);
   const [hospitalSearchSubmitted, setHospitalSearchSubmitted] = useState(false);
+  const [showReasonScreen, setShowReasonScreen] = useState(false);
   const showHospitalRecommendations = canSearchHospitals && hospitalSearchSubmitted;
+  const reasonTone = recommendationToneForRisk(risk);
+  const reasonCurrent = formatRiskContext(risk);
+  const reasonText = hospitalRecommendationReason(risk, first);
+  const reasonAction = actionGuideForRisk(risk, "hospital");
   const openHospitalFinder = () => {
     setHospitalFinderOpen(true);
     setHospitalSearchSubmitted(false);
+    setShowReasonScreen(false);
   };
+
+  if (showHospitalRecommendations && showReasonScreen) {
+    return (
+      <section className="space-y-4">
+        <div className="surface border-2 border-river">
+          <button type="button" className="secondary-button min-h-16 w-full text-lg" onClick={() => setShowReasonScreen(false)}>
+            <ArrowLeft size={24} aria-hidden="true" />
+            병원 추천 결과로 돌아가기
+          </button>
+          <div className="mt-5">
+            <p className="text-lg font-black text-river">추천 기준</p>
+            <h2 className="mt-2 text-3xl font-black leading-10">왜 이 병원을 먼저 보여드렸나요?</h2>
+            <p className="mt-4 text-xl font-bold leading-9 text-stone-700">
+              입력한 증상과 위치 정보를 기준으로 추천에 반영한 내용을 정리했습니다.
+            </p>
+          </div>
+        </div>
+
+        <RecommendationReasonPanel
+          current={reasonCurrent}
+          reason={reasonText}
+          action={reasonAction}
+          tone={reasonTone}
+          large
+        />
+
+        {first && (
+          <article className="rounded-lg border-2 border-river bg-white p-5 shadow-soft">
+            <p className="text-lg font-black text-river">현재 추천 의료기관</p>
+            <h3 className="mt-2 text-3xl font-black leading-10">{first.hospital.name}</h3>
+            <p className="mt-3 text-xl font-bold leading-8 text-stone-700">
+              {formatDistance(first.distanceKm)} · {formatDepartmentList(first.hospital.departments)}
+            </p>
+          </article>
+        )}
+      </section>
+    );
+  }
 
   if (showHospitalRecommendations) {
     return (
@@ -2529,15 +2634,15 @@ function EasyHospitalResultView({
           <p className="mt-4 text-xl font-bold leading-9 text-stone-700">
             가까운 의료기관을 먼저 보여드립니다. 방문 전 전화로 확인해 주세요.
           </p>
+          <button
+            type="button"
+            className="secondary-button mt-5 min-h-16 w-full text-lg"
+            onClick={() => setShowReasonScreen(true)}
+          >
+            <Brain size={24} aria-hidden="true" />
+            추천 기준 보기
+          </button>
         </div>
-
-        <RecommendationReasonPanel
-          current={formatRiskContext(risk)}
-          reason={hospitalRecommendationReason(risk, first)}
-          action={actionGuideForRisk(risk, "hospital")}
-          tone={recommendationToneForRisk(risk)}
-          large
-        />
 
         <div className="grid gap-3 rounded-lg border-2 border-orange-200 bg-orange-50 p-3 shadow-soft">
           <button type="button" className="secondary-button min-h-16 w-full text-lg" onClick={onEdit}>
@@ -2551,6 +2656,7 @@ function EasyHospitalResultView({
             onClick={() => {
               setHospitalFinderOpen(true);
               setHospitalSearchSubmitted(false);
+              setShowReasonScreen(false);
             }}
           >
             <MapPin size={24} aria-hidden="true" />
