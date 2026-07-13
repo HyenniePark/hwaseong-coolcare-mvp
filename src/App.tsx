@@ -1995,16 +1995,70 @@ function ShelterResultView({
   weather: WeatherLoadResult;
   onEdit: () => void;
 }) {
+  const [showReasonScreen, setShowReasonScreen] = useState(false);
+  const topRecommendation = recommendations[0];
+  const reasonTone = recommendationToneForRisk(risk);
+  const reasonCurrent = formatRiskContext(risk);
+  const reasonText = shelterRecommendationReason(risk, topRecommendation);
+  const reasonAction = actionGuideForRisk(risk, "shelter");
+
+  if (showReasonScreen) {
+    return (
+      <section className="space-y-4">
+        <div className="surface">
+          <button type="button" className="secondary-button w-full" onClick={() => setShowReasonScreen(false)}>
+            <ArrowLeft size={18} aria-hidden="true" />
+            쉼터 추천 결과로 돌아가기
+          </button>
+          <div className="mt-5">
+            <p className="text-sm font-black text-cool">추천 기준</p>
+            <h2 className="mt-1 text-xl font-black">왜 이 쉼터를 먼저 보여드렸나요?</h2>
+            <p className="mt-2 text-sm leading-6 text-stone-700">
+              입력한 몸 상태와 위치 정보를 기준으로 추천에 반영한 내용을 정리했습니다.
+            </p>
+          </div>
+        </div>
+
+        <RecommendationReasonPanel
+          current={reasonCurrent}
+          reason={reasonText}
+          action={reasonAction}
+          tone={reasonTone}
+          large
+        />
+
+        {topRecommendation && (
+          <div className="surface">
+            <p className="text-sm font-black text-cool">현재 추천 쉼터</p>
+            <h3 className="mt-1 text-lg font-black">{topRecommendation.shelter.name}</h3>
+            <p className="mt-2 text-sm leading-6 text-stone-700">{topRecommendation.shelter.address}</p>
+            <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-line pt-3 text-sm">
+              <Metric label="거리" value={formatDistance(topRecommendation.distanceKm)} />
+              <Metric label="가까운 병원" value={formatDistance(topRecommendation.nearestHospitalDistanceKm)} />
+            </div>
+          </div>
+        )}
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-4">
       <ResultHeader title="쉼터 추천 결과" onEdit={onEdit} showEdit={false} />
       <WeatherStrip result={weather} />
-      <RiskPanel risk={risk} showSignals={false} />
-      <RecommendationReasonPanel
-        current={formatRiskContext(risk)}
-        reason={shelterRecommendationReason(risk, recommendations[0])}
-        action={actionGuideForRisk(risk, "shelter")}
-        tone={recommendationToneForRisk(risk)}
+      <RiskPanel
+        risk={risk}
+        showSignals={false}
+        action={
+          <button
+            type="button"
+            className="secondary-button shrink-0 px-3 py-2 text-xs"
+            onClick={() => setShowReasonScreen(true)}
+          >
+            <Brain size={16} aria-hidden="true" />
+            추천 기준 보기
+          </button>
+        }
       />
       <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 shadow-soft">
         <button type="button" className="secondary-button w-full" onClick={onEdit}>
@@ -2968,7 +3022,15 @@ function WeatherStrip({ result }: { result: WeatherLoadResult }) {
   );
 }
 
-function RiskPanel({ risk, showSignals = true }: { risk: RiskResult; showSignals?: boolean }) {
+function RiskPanel({
+  risk,
+  showSignals = true,
+  action,
+}: {
+  risk: RiskResult;
+  showSignals?: boolean;
+  action?: ReactNode;
+}) {
   const isElevated = risk.level === "danger" || risk.level === "caution";
 
   return (
@@ -2985,8 +3047,11 @@ function RiskPanel({ risk, showSignals = true }: { risk: RiskResult; showSignals
           size={24}
           aria-hidden="true"
         />
-        <div>
-          <h3 className="text-lg font-black">{risk.title}</h3>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <h3 className="text-lg font-black">{risk.title}</h3>
+            {action}
+          </div>
           <p className="mt-1 text-sm leading-6 text-stone-700">{risk.guidance}</p>
         </div>
       </div>
