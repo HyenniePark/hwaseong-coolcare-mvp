@@ -314,7 +314,7 @@ const viewItems: Array<{
   icon: LucideIcon;
 }> = [
   { id: "shelter", label: "쉼터 찾기", easyLabel: "쉼터 찾기", icon: Home },
-  { id: "cafe", label: "쉼터 대안 카페 찾기", easyLabel: "카페 찾기", icon: Coffee },
+  { id: "cafe", label: "쉼터 대안 찾기", easyLabel: "대안 찾기", icon: Coffee },
   { id: "hospital", label: "위험 신호 체크", easyLabel: "위험 신호 체크", icon: Hospital },
   { id: "account", label: "계정 정보", easyLabel: "내 정보", icon: UserRound },
   { id: "easy", label: "큰글씨 모드", easyLabel: "큰글씨", icon: ShieldCheck },
@@ -421,6 +421,7 @@ function App() {
   const [cafeSearchState, setCafeSearchState] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [cafeSearchMessage, setCafeSearchMessage] = useState("");
   const [dismissedEmergencyDialog, setDismissedEmergencyDialog] = useState(false);
+  const [dismissedShelterAlternativeDialog, setDismissedShelterAlternativeDialog] = useState(false);
   const [showEasyPrompt, setShowEasyPrompt] = useState(false);
   const [showBasicModePrompt, setShowBasicModePrompt] = useState(false);
   const [location, setLocation] = useState<GeoPoint>({
@@ -516,6 +517,17 @@ function App() {
     [shelters, hospitals, profile, shelterRecommendationStatus, location, weather, shelterResultRisk.level],
   );
 
+  const nearestShelterDistanceKm = useMemo(() => {
+    if (shelters.length === 0) {
+      return null;
+    }
+
+    return shelters.reduce(
+      (nearest, shelter) => Math.min(nearest, distanceKm(location, shelter)),
+      Number.POSITIVE_INFINITY,
+    );
+  }, [location, shelters]);
+
   const hospitalRecommendations = useMemo(
     () => recommendHospitals(hospitals, hospitalCurrentStatus, location, profile, weather),
     [hospitals, hospitalCurrentStatus, location, profile, weather],
@@ -532,6 +544,24 @@ function App() {
     shelterSubmitted &&
     shelterStatus.hasEmergencySignal &&
     !dismissedEmergencyDialog;
+
+  const isAfterShelterHours = new Date().getHours() >= 18;
+  const alternativePromptReasons: string[] = [];
+
+  if (nearestShelterDistanceKm !== null && nearestShelterDistanceKm >= 0.5) {
+    alternativePromptReasons.push(`가장 가까운 쉼터가 ${formatDistance(nearestShelterDistanceKm)} 떨어져 있어요.`);
+  }
+
+  if (isAfterShelterHours) {
+    alternativePromptReasons.push("18시 이후라 일부 무더위쉼터가 닫혔을 수 있어요.");
+  }
+
+  const shouldShowShelterAlternativeDialog =
+    activeView === "shelterResult" &&
+    shelterSubmitted &&
+    !shouldShowEmergencyDialog &&
+    !dismissedShelterAlternativeDialog &&
+    alternativePromptReasons.length > 0;
 
   const activityAreaCenter = () => {
     const areaKey = profile.homeArea || profile.homeGu;
@@ -648,6 +678,7 @@ function App() {
   const updateShelterStatus = (next: ShelterSearchStatus) => {
     setShelterStatus(next);
     setShelterSubmitted(false);
+    setDismissedShelterAlternativeDialog(false);
     if (!next.hasEmergencySignal) {
       setDismissedEmergencyDialog(false);
     }
@@ -661,6 +692,7 @@ function App() {
   const openShelterResultsFromSignalCheck = () => {
     setShelterSubmitted(true);
     setDismissedEmergencyDialog(true);
+    setDismissedShelterAlternativeDialog(false);
     setActiveView("shelterResult");
   };
 
@@ -772,6 +804,7 @@ function App() {
             onSubmit={() => {
               setShelterSubmitted(true);
               setDismissedEmergencyDialog(false);
+              setDismissedShelterAlternativeDialog(false);
               setActiveView("shelterResult");
             }}
             locationMode={locationMode}
@@ -789,6 +822,7 @@ function App() {
             onSubmit={() => {
               setShelterSubmitted(true);
               setDismissedEmergencyDialog(false);
+              setDismissedShelterAlternativeDialog(false);
               setActiveView("shelterResult");
             }}
             locationMode={locationMode}
@@ -928,6 +962,18 @@ function App() {
           }}
           onStayShelter={() => setDismissedEmergencyDialog(true)}
           onClose={() => setDismissedEmergencyDialog(true)}
+        />
+      )}
+
+      {shouldShowShelterAlternativeDialog && (
+        <ShelterAlternativeDialog
+          reasons={alternativePromptReasons}
+          onOpenAlternative={() => {
+            setDismissedShelterAlternativeDialog(true);
+            submitCafeSearch();
+          }}
+          onStayShelter={() => setDismissedShelterAlternativeDialog(true)}
+          onClose={() => setDismissedShelterAlternativeDialog(true)}
         />
       )}
     </main>
@@ -1438,9 +1484,10 @@ function CafeAlternativeView({
             <Coffee size={28} aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-xl font-black">쉼터 대안 카페 찾기</h2>
+            <h2 className="text-xl font-black">쉼터 대안 찾기</h2>
             <p className="mt-2 text-sm leading-6 text-stone-700">
-              쉼터 이용이 어렵거나 잠시 더위를 피할 곳이 필요할 때 가까운 카페를 확인합니다.
+              쉼터 이용이 어렵거나 잠시 더위를 피할 곳이 필요할 때 가까운 대안을 확인합니다.
+              (API 안정성으로 인하여 카페 추천 중심으로 구현함)
             </p>
           </div>
         </div>
@@ -1774,7 +1821,7 @@ function IntegrationStatusView({
         />
         <StatusCard
           icon={Coffee}
-          title="쉼터 대안 카페 검색"
+          title="쉼터 대안 검색"
           status={apiBaseUrl === "미설정" ? "미설정" : "백엔드 REST"}
           tone={apiBaseUrl === "미설정" ? "warn" : "ok"}
           detail={
@@ -2122,15 +2169,8 @@ function CafeAlternativeResultView({
 
   return (
     <section className="space-y-4">
-      <ResultHeader title="쉼터 대안 카페 결과" onEdit={onEdit} showEdit={false} />
+      <ResultHeader title="쉼터 대안 결과" onEdit={onEdit} showEdit={false} />
       <WeatherStrip result={weather} />
-
-      <RecommendationReasonPanel
-        current={"위치 기준: " + locationDisplay}
-        reason="공공쉼터 이용이 어려울 때 대안 안내"
-        action="운영 확인 → 가까운 카페 이동"
-        tone="orange"
-      />
 
       <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 shadow-soft">
         <button type="button" className="secondary-button w-full" onClick={onEdit}>
@@ -3348,6 +3388,58 @@ function EmergencyDialog({
           </button>
           <button type="button" className="secondary-button w-full" onClick={onStayShelter}>
             쉼터 계속 보기
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ShelterAlternativeDialog({
+  reasons,
+  onOpenAlternative,
+  onStayShelter,
+  onClose,
+}: {
+  reasons: string[];
+  onOpenAlternative: () => void;
+  onStayShelter: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 px-4 pb-4 pt-12" role="dialog" aria-modal="true" aria-labelledby="shelter-alternative-dialog-title">
+      <div className="relative w-full max-w-md rounded-lg bg-white p-5 shadow-soft">
+        <DialogCloseButton onClick={onClose} label="쉼터 대안 안내 팝업 닫기" />
+        <div className="flex items-start gap-3 pr-10">
+          <div className="rounded-lg bg-orange-50 p-3 text-cool">
+            <Coffee size={28} aria-hidden="true" />
+          </div>
+          <div>
+            <h2 id="shelter-alternative-dialog-title" className="text-xl font-black">
+              가까운 대안도 확인할까요?
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-stone-700">
+              쉼터 이용이 애매한 조건이라면 카페 같은 가까운 대안도 함께 확인할 수 있어요.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-2 rounded-lg border border-orange-200 bg-orange-50 p-3">
+          {reasons.map((reason) => (
+            <div key={reason} className="flex items-start gap-2 text-sm font-bold leading-6 text-stone-800">
+              <Check className="mt-1 shrink-0 text-cool" size={16} aria-hidden="true" />
+              <span>{reason}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-5 grid gap-2">
+          <button type="button" className="primary-button w-full" onClick={onOpenAlternative}>
+            <Coffee size={18} aria-hidden="true" />
+            쉼터 대안 바로 보기
+          </button>
+          <button type="button" className="secondary-button w-full" onClick={onStayShelter}>
+            쉼터 결과 계속 보기
           </button>
         </div>
       </div>
